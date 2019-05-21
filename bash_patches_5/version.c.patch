@@ -1,0 +1,11 @@
+--- ../bash-4.4/version.c	2016-05-19 21:34:02.000000000 +0300
++++ version.c	2018-06-21 11:12:01.926739639 +0300
+@@ -83,7 +83,7 @@
+ show_shell_version (extended)
+      int extended;
+ {
+-  printf (_("GNU bash, version %s (%s)\n"), shell_version_string (), MACHTYPE);
++  printf (_("GNU bash built by Zackptg5 using the Android NDK, version %s (%s)\n"), shell_version_string (), MACHTYPE);
+   if (extended)
+     {
+       printf ("%s\n", _(bash_copyright));

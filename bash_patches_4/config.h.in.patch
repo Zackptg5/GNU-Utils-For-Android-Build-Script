@@ -1,0 +1,14 @@
+--- ../bash-4.4/config.h.in	Sat Dec 15 01:13:30 2018
++++ config.h.in	Sat Dec 15 01:13:41 2018
+@@ -616,8 +616,10 @@
+ /* Define if you have the getcwd function.  */
+ #undef HAVE_GETCWD
+ 
++#ifndef __LP64__
+ /* Define if you have the getdtablesize function.  */
+-#undef HAVE_GETDTABLESIZE
++#define HAVE_GETDTABLESIZE 1
++#endif
+ 
+ /* Define if you have the getgroups function.  */
+ #undef HAVE_GETGROUPS
