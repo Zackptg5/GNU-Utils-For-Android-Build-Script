@@ -184,7 +184,7 @@ for LARCH in $ARCH; do
       "cpio") cp_strip src/$LBIN;;
       "diffutils") cp_strip "src/cmp src/diff src/diff3 src/sdiff";;
       "ed") cp_strip $LBIN;;
-      "findutils") cp_strip "find/find locate/bigram locate/code locate/frcode locate/locate xargs/xargs";;
+      "findutils") cp_strip "find/find locate/bigram locate/code locate/frcode locate/locate locate/updatedb xargs/xargs";;
       "gawk") cp_strip $LBIN;;
       "grep") cp_strip src/$LBIN; cp -f src/egrep src/fgrep $DIR/$LARCH/;;
       "gzip") cp_strip $LBIN; cp -f gunzip gzexe $DIR/$LARCH/;;

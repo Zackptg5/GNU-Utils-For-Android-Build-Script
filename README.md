@@ -1,7 +1,7 @@
 ## GNU Utils for Android Build Script ##
 
 This will build any of the following static GNU binaries:<br/>
-bash, bc (also includes dc), coreutils (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes find, bigram, code, frcode, locate, xargs), gawk (GNU awk), grep (also includes egrep and fgrep), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
+bash, bc (also includes dc), coreutils (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes bigram, code, find, frcode, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
 
 ## Build instructions
 
