@@ -1,20 +1,35 @@
 ## GNU Utils for Android Build Script ##
 
 This will build any of the following static GNU binaries:<br/>
-bash, bc (also includes dc), coreutils (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes bigram, code, find, frcode, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
+bash, bc (also includes dc), coreutils (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes find, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
 
 ## Build instructions
 
 ```
 sudo apt install build-essential gcc-multilib libgnutls28-dev lzip # For debian/ubuntu based distributions - install equivalent dev tools and dependencies for yours
-./build.bash BIN=<BIN> ARCH=<ARCH>
+./build.bash --help # For more info on usage
 ```
 
-## Notes
+## Compatibility
 
-- The bash patches are for bash 4.4-23 and 5.0.x stable. If you're compiling any other version of bash, make sure the patch files are targeting the correct lines
-- The advcpmv patch is for coreutils 8.31. If you're compiling any other version, you may need to modify it to target the correct lines
-- If building fails, you likely need to add/remove/modify patches. Just place the patches in the patches folder and the script will apply them
+The below table notes if the binary is compatible with android ndk, linaro, or gcc compilers. If static or dynamic is listed, then only that link method is working
+
+|           | NDK?    | Linaro? | GCC?   |
+| --------- |:-------:|:-------:|:------:|
+| bash      | *Static*  | Yes     | Yes    |
+| bc        | Yes     | Yes     | Yes    |
+| coreutils | No      | *Static*  | *Static* | *Coreutils won't accept fPIE*
+| cpio      | Yes     | Yes     | Yes    |
+| diffutils | *Static*  | Yes     | Yes    |
+| ed        | Yes     | Yes     | Yes    |
+| findutils | No      | Yes     | Yes    |
+| gawk      | *Static*  | Yes     | Yes    |
+| grep      | Yes       | Yes     | Yes    |
+| gzip      | Yes     | Yes     | Yes    |
+| ncurses   | Yes     | Yes     | Yes    |
+| patch     | Yes     | Yes     | Yes    |
+| sed       | Yes     | Yes     | Yes    |
+| tar       | Yes     | Yes     | Yes    |
 
 ## Credits
 

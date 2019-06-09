@@ -8,26 +8,38 @@ echogreen () {
 usage () {
   echo " "
   echored "USAGE:"
+  echogreen "NDK=      (Default: false) (Valid options are: true, false)"
   echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
+  echogreen "STATIC=   (Default: false) (Valid options are: true, false)"
+  echogreen "API=   (Default: false) (Valid options are: 21, 22, 23, 24, 26, 27, 28)"
   echogreen "           Note that you can put as many of these as you want together as long as they're comma separated"
   echogreen "           Ex: BIN=cpio,gzip,tar"
-  echored "Coreutils additional options:"
-  echogreen "FULL=true (Default true) Set this to true to compile all of coreutils, otherwise only advanced cp/mv will be setup"
-  echogreen "SEP=true  (Default false) Set this to true to compile all of coreutils into separate binaries (only applicable if FULL=true)"
   echogreen "           Also note that coreutils includes advanced cp/mv (adds progress bar functionality with -g flag"
   echo " "
   exit 1
 }
 cp_strip () {
-  for i in $1; do
-    cp -f $i $DIR/$LARCH/`basename $i`
+  echogreen "Processing files..."
+  mkdir $DIR/$LARCH 2>/dev/null
+  for i in $(find $DIR/$LBIN -type f ! -size 0 -exec grep -IL . "{}" \;); do
     if $LINARO; then
-      $target_host-strip $DIR/$LARCH/`basename $i`
+      $target_host-strip $i 2>/dev/null
+    elif $NDK; then
+      $STRIP $i 2>/dev/null
     else
-      strip $DIR/$LARCH/`basename $i`
+      strip $i 2>/dev/null
     fi
   done
+  rm -rf $DIR/$LARCH/$LBIN
+  mv -f $DIR/$LBIN $DIR/$LARCH
+}
+patch_file() {
+  echogreen "Applying patch"
+  local DEST=$(basename $1)
+  cp -f $1 $DEST
+  patch -p0 -i $DEST
+  [ $? -ne 0 ] && { echored "Patching failed! Did you verify line numbers? See README for more info"; exit 1; }
 }
 bash_patches() {
   echogreen "Applying patches"
@@ -46,7 +58,7 @@ bash_patches() {
     cp -f $i $PFILE
     sed -i "s/4.4/$VER/g" $PFILE    
     patch -p0 -i $PFILE
-    [ $? -ne 0 ] && { echored "Patching failed! Did you verify line numbers? See README for more info"; return 1; }
+    [ $? -ne 0 ] && { echored "Patching failed!"; return 1; }
     rm -f $PFILE
   done
 }
@@ -56,51 +68,79 @@ TEXTGREEN=$(tput setaf 2)
 TEXTRED=$(tput setaf 1)
 DIR=`pwd`
 LINARO=false
-FULL=true
-SEP=false
+STATIC=false
+NDKVER=r19c
+MAXAPI=28
 export OPATH=$PATH
 OIFS=$IFS; IFS=\|; 
 while true; do
   case "$1" in
     -h|--help) usage;;
     "") shift; break;;
-    BIN=*|ARCH=*|FULL=*|SEP=*) eval $(echo "$1" | sed -e 's/=/="/' -e 's/$/"/' -e 's/,/ /g'); shift;;
+    API=*|STATIC=*|NDK=*|BIN=*|ARCH=*) eval $(echo "$1" | sed -e 's/=/="/' -e 's/$/"/' -e 's/,/ /g'); shift;;
     *) echored "Invalid option: $1!"; usage;;
   esac
 done
 IFS=$OIFS
 
+case $API in
+  21|22|23|24|26|27|28) ;;
+  *) API=21;;
+esac
+
+if [ -f /proc/cpuinfo ]; then
+  JOBS=$(grep flags /proc/cpuinfo |wc -l)
+elif [ ! -z $(which sysctl) ]; then
+  JOBS=$(sysctl -n hw.ncpu)
+else
+  JOBS=2
+fi
+
+[ -z $NDK ] && NDK=false
+if $NDK; then
+  # Set up Android NDK
+  echogreen "Fetching Android NDK $NDKVER"
+  [ -f "android-ndk-$NDKVER-linux-x86_64.zip" ] || wget https://dl.google.com/android/repository/android-ndk-$NDKVER-linux-x86_64.zip
+  [ -d "android-ndk-$NDKVER" ] || unzip -o android-ndk-$NDKVER-linux-x86_64.zip
+  export ANDROID_NDK_HOME=$DIR/android-ndk-$NDKVER
+  export ANDROID_TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+else
+  NDK=false
+fi
+
 [ -z "$ARCH" -o "$ARCH" == "all" ] && ARCH="arm arm64 x86 x64"
 for LARCH in $ARCH; do
   case $LARCH in
-    arm64|aarch64) LARCH=arm64; target_host=aarch64-linux-gnu; LINARO=true;;
-    arm) LARCH=arm; target_host=arm-linux-gnueabi; LINARO=true;;
-    x64|x86_64) LARCH=x64; target_host=x86_64-linux-gnu; LINARO=false;;
-    x86|i686) LARCH=x86; target_host=i686-linux-gnu; LINARO=false;;
+    arm64|aarch64) LINKER=linker64; LARCH=aarch64; $NDK && target_host=aarch64-linux-android || { target_host=aarch64-linux-gnu; LINARO=true; };;
+    arm) LINKER=linker; LARCH=arm; $NDK && target_host=arm-linux-androideabi || { target_host=arm-linux-gnueabi; LINARO=true; };;
+    x64|x86_64) LINKER=linker64; LINARO=false; LARCH=x86_64; $NDK && target_host=x86_64-linux-android || target_host=x86_64-linux-gnu;;
+    x86|i686) LINKER=linker; LINARO=false; LARCH=i686; $NDK && target_host=i686-linux-android || target_host=i686-linux-gnu;;
     *) echored "Invalid ARCH entered!"; usage;;
   esac
 
   [ -z "$BIN" -o "$BIN" == "all" ] && BIN="bash bc coreutils cpio diffutils ed findutils gawk grep gzip ncurses patch sed tar"
   for LBIN in $BIN; do
+    # Versioning and overrides
+    LAPI=$API
     case $LBIN in
       "bash") EXT=gz; VER=5.0;;
       "bc") EXT=gz; VER=1.07.1;;
-      "coreutils") EXT=xz; VER=8.31;;
+      "coreutils") EXT=xz; VER=8.31; [ $LAPI -lt 23 ] && LAPI=23;;
       "cpio") EXT=gz; VER=2.12;;
       "diffutils") EXT=xz; VER=3.7;;
       "ed") EXT=lz; VER=1.15;;
-      "findutils") EXT=gz; VER=4.6.0;;
+      "findutils") EXT=gz; VER=4.6.0; [ $LAPI -lt 23 ] && LAPI=23;;
       "gawk") EXT=xz; VER=5.0.0;;
-      "grep") EXT=xz; VER=3.3;;
+      "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23;;
       "gzip") EXT=xz; VER=1.10;;
       "ncurses") EXT=gz; VER=6.1;;
       "patch") EXT=xz; VER=2.7.6;;
-      "sed") EXT=xz; VER=4.7;;
-      "tar") EXT=xz; VER=1.32;;
+      "sed") EXT=xz; VER=4.7; [ $LAPI -lt 23 ] && LAPI=23;;
+      "tar") EXT=xz; VER=1.32; LAPI=28;;
       *) echored "Invalid binary specified!"; usage;;
     esac
 
-    [[ $(wget -S --spider ftp.gnu.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT 2>&1 | grep 'HTTP/1.1 200 OK') ]] || { echored "Invalid $LBIN VER! Check this: ftp.gnu.org/gnu/$LBIN for valid versions!"; continue; }
+    [[ $(wget -S --spider ftp.gnu.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT 2>&1 | grep 'HTTP/1.1 200 OK') ]] || { echored "Invalid $LBIN VER! Check this: ftp.gnu.org/gnu/$LBIN for valid versions!"; exit 1; }
 
     # Setup
     echogreen "Fetching $LBIN $VER"
@@ -109,90 +149,93 @@ for LARCH in $ARCH; do
     tar -xf $LBIN-$VER.tar.$EXT
 
     export PATH=$OPATH
-    if $LINARO; then
+    export GCC=$target_host-gcc
+    if $NDK; then
+      export PATH=$ANDROID_TOOLCHAIN:$PATH
+      export AR=$target_host-ar
+      export AS=$target_host-as
+      export CC=$target_host-clang
+      export GCC=$target_host-gcc
+      export CXX=$target_host-clang++
+      export GXX=$target_host-g++
+      export LD=$target_host-ld
+      export RANLIB=$target_host-ranlib
+      export STRIP=$target_host-strip
+      [ "$LARCH" == "arm" ] && target_host=armv7a-linux-androideabi
+      # Create sometimes needed symlinks
+      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$CC
+      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$CCX
+      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$GCC
+      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$GXX
+      [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
+    elif $LINARO; then
       [ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
       [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-
-      # Add the standalone toolchain to the search path.
       export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
     fi
     
     cd $DIR/$LBIN-$VER
     
-    if [ "$LBIN" == "bash" ]; then
-      case $VER in
-        5*) rm -rf $DIR/bash_patches; cp -rf $DIR/bash_patches_5 $DIR/bash_patches;;
-        *) rm -rf $DIR/bash_patches; cp -rf $DIR/bash_patches_4 $DIR/bash_patches;;
-      esac
-      bash_patches || continue
-    elif [ "$LBIN" == "coreutils" ]; then
-      # Apply patches - originally by atdt and Sonelli @ github
-      echogreen "Applying advcpmv patches"
-      patch -p1 -i $DIR/advcpmv-$VER.patch
-      [ $? -ne 0 ] && { echored "ADVC patching failed! Did you verify line numbers? See README for more info"; continue; }
-    fi
-
-    # Configure
+    # Run patches and configure
     echogreen "Configuring for $LARCH"
-    if [ "$target_host" == "i686-linux-gnu" ]; then
-      FLAGS='-m32 -march=i686 -static -O2'
-      HOST="TIME_T_32_BIT_OK=yes --host=$target_host"
-    else
-      FLAGS='-static -O2'
-      HOST="--host=$target_host"
-    fi
-    # Fix for mktime_internal build error for arm/64 cross-compile
-    [ "$LBIN" == "coreutils" -o "$LBIN" == "diffutils" -o "$LBIN" == "patch" -o "$LBIN" == "tar" ] && sed -i -e '/WANT_MKTIME_INTERNAL=0/i\WANT_MKTIME_INTERNAL=1\n$as_echo "#define NEED_MKTIME_INTERNAL 1" >>confdefs.h' -e '/^ *WANT_MKTIME_INTERNAL=0/,/^ *fi/d' configure
-    # Single binary coreutils if applicable
-    [ "$LBIN" == "coreutils" ] && $FULL && ! $SEP && HOST="--enable-single-binary=symlinks $HOST"
-    
-    # Ed has super old configure flags, Bash got lots of stuff
     case $LBIN in
-      "bash") ./configure --disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables $HOST CFLAGS="$FLAGS" LDFLAGS="$FLAGS";;
-      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure CFLAGS="$FLAGS" LDFLAGS="$FLAGS" || ./configure CC=$target_host-gcc CFLAGS="$FLAGS" LDFLAGS="$FLAGS";;
-      "ncurses") export AR="ar" AS="clang -m32" CC="clang -m32" CXX="clang++ -m32" LD="ld" STRIP="strip"; ./configure --disable-nls --without-gmp $HOST CFLAGS="$FLAGS" LDFLAGS="$FLAGS";;
-      *) ./configure --disable-nls --without-gmp $HOST CFLAGS="$FLAGS" LDFLAGS="$FLAGS";;
+      "bash") $STATIC && FLAGS="--enable-static-link "; bash_patches || exit 1;;
+      "coreutils"|"sed") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/stdio.in.h; };;
+      "tar") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" gnu/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" gnu/stdio.in.h; };;
     esac
-    [ $? -eq 0 ] || { echored "Configure failed!"; cd $DIR; continue; }
+    # Fix for mktime_internal build error for non-ndk arm/64 cross-compile
+    case $LBIN in
+      "coreutils"|"diffutils"|"patch"|"tar") $NDK || sed -i -e '/WANT_MKTIME_INTERNAL=0/i\WANT_MKTIME_INTERNAL=1\n$as_echo "#define NEED_MKTIME_INTERNAL 1" >>confdefs.h' -e '/^ *WANT_MKTIME_INTERNAL=0/,/^ *fi/d' configure;;
+    esac
+    [ -f $DIR/$LBIN.patch ] && patch_file $DIR/$LBIN.patch
+    if $STATIC; then
+      CFLAGS='-static -O2'
+      LDFLAGS='-static'
+      $NDK && [ -f $DIR/ndk_static_patches/$LBIN.patch ] && patch_file $DIR/ndk_static_patches/$LBIN.patch
+    else
+      if ! $NDK && [ "$LBIN" == "coreutils" ]; then
+        CFLAGS='-O2'
+        LDFLAGS=''
+      else
+        CFLAGS='-O2 -fPIE -fPIC'
+        LDFLAGS='-pie'
+      fi
+      $NDK || LDFLAGS="$LDFLAGS -Wl,-dynamic-linker,/system/bin/$LINKER"
+    fi
+    
+    case $LARCH in
+      "arm") CFLAGS="$CFLAGS -mfloat-abi=softfp -mthumb"; LDFLAGS="$LDFLAGS -march=armv7-a -Wl,--fix-cortex-a8";;
+      "i686") CFLAGS="$CFLAGS -march=i686 -mtune=intel -mssse3 -mfpmath=sse -m32";;
+      "x86_64") CFLAGS="$CFLAGS -march=x86-64 -msse4.2 -mpopcnt -m64 -mtune=intel";;
+    esac
+    
+    # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms
+    case $LBIN in
+      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "coreutils") ./configure --disable-nls --without-gmp --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
+      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      *) ./configure --disable-nls --without-gmp --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+    esac
+    [ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 
     # Build
     echogreen "Building"
-    sed -i 's/^MANS = .*//g' Makefile
-    # Fix for coreutils
-    [ "$LBIN" == "coreutils" ] && [ ! "$(grep "#define HAVE_MKFIFO 1" lib/config.h)" ] && echo "#define HAVE_MKFIFO 1" >> lib/config.h
-    # Fix for bc
-    [ "$LBIN" == "bc" ] && sed -i -e '\|./fbc -c|d' -e 's|$(srcdir)/fix-libmath_h|cp -f ../../bc_libmath.h $(srcdir)/libmath.h|' bc/Makefile
-    make
-    [ $? -eq 0 ] || { echored "Build failed!"; cd $DIR; continue; }
-    
-    # Process    
-    mkdir $DIR/$LARCH 2>/dev/null
+    # Fixes
     case $LBIN in
-      "bash") cp_strip "$LBIN";;
-      "bc") cp_strip "$LBIN/$LBIN dc/dc";;
-      "coreutils") if $FULL; then
-                     if $SEP; then
-                       for i in $(cat $DIR/coreutils_modules); do
-                         cp_strip src/$i
-                       done
-                     else
-                       cp_strip src/$LBIN
-                     fi
-                   else
-                     cp_strip "src/cp src/mv"
-                   fi;;
-      "cpio") cp_strip src/$LBIN;;
-      "diffutils") cp_strip "src/cmp src/diff src/diff3 src/sdiff";;
-      "ed") cp_strip $LBIN;;
-      "findutils") cp_strip "find/find locate/bigram locate/code locate/frcode locate/locate locate/updatedb xargs/xargs";;
-      "gawk") cp_strip $LBIN;;
-      "grep") cp_strip src/$LBIN; cp -f src/egrep src/fgrep $DIR/$LARCH/;;
-      "gzip") cp_strip $LBIN; cp -f gunzip gzexe $DIR/$LARCH/;;
-      "ncurses") cp_strip "progs/clear progs/infocmp progs/tabs progs/tic progs/toe progs/tput progs/tset";;
-      "patch") cp_strip src/$LBIN;;
-      "sed") cp_strip $LBIN/$LBIN;;
-      "tar") cp_strip src/$LBIN;;
-    esac
+      "bc") sed -i -e '\|./fbc -c|d' -e 's|$(srcdir)/fix-libmath_h|cp -f ../../bc_libmath.h $(srcdir)/libmath.h|' bc/Makefile;;
+      "coreutils") [ ! "$(grep "#define HAVE_MKFIFO 1" lib/config.h)" ] && echo "#define HAVE_MKFIFO 1" >> lib/config.h;;
+    esac    
+    make -j$JOBS
+    [ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
+    
+    # Fix paths in updatedb
+    [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|LIBEXECDIR=/usr/local/libexec|LIBEXECDIR=/system/bin|" -e "s|BINDIR=/usr/local/bin|BINDIR=/system/bin|" -e "s|LOCATE_DB=/usr/local/var/locatedb|LOCATE_DB=/sdcard/coreutils/locatedb|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/coreutils/tmp|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/coreutils/tmp|" locate/updatedb
+    # Temporary PIE patch for now
+    [ "$LBIN" == "coreutils" -a ! $STATIC ] && for i in src/coreutils src/sort src/timeout; do sed -i "s/\x02\x00\xb7\x00/\x03\x00\xb7\x00/" $i; done
+
+    mkdir $DIR/$LBIN 2>/dev/null
+    make install DESTDIR=$DIR/$LBIN
+    cp_strip
     echogreen "$LBIN built sucessfully and can be found at: $DIR/$LARCH"
     cd $DIR
   done
