@@ -16,20 +16,20 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 
 |           | NDK?    | Linaro? | GCC?   |
 | --------- |:-------:|:-------:|:------:|
-| bash      | *Static*  | Yes     | Yes    |
-| bc        | Yes     | Yes     | Yes    |
-| coreutils | No      | *Static*  | *Static* |
-| cpio      | Yes     | Yes     | Yes    |
-| diffutils | *Static*  | Yes     | Yes    |
-| ed        | Yes     | Yes     | Yes    |
-| findutils | No      | Yes     | Yes    |
-| gawk      | *Static*  | Yes     | Yes    |
-| grep      | Yes       | Yes     | Yes    |
-| gzip      | Yes     | Yes     | Yes    |
-| ncurses   | Yes     | Yes     | Yes    |
-| patch     | Yes     | Yes     | Yes    |
-| sed       | Yes     | Yes     | Yes    |
-| tar       | Yes     | Yes     | Yes    |
+| **bash**      | *Static*  | Yes     | Yes    |
+| **bc**        | Yes     | Yes     | Yes    |
+| **coreutils** | No      | *Static*  | *Static* |
+| **cpio**      | Yes     | Yes     | Yes    |
+| **diffutils** | *Static*  | Yes     | Yes    |
+| **ed**        | Yes     | Yes     | Yes    |
+| **findutils** | No      | Yes     | Yes    |
+| **gawk**      | *Static*  | Yes     | Yes    |
+| **grep**      | Yes       | Yes     | Yes    |
+| **gzip**      | Yes     | Yes     | Yes    |
+| **ncurses**   | Yes     | Yes     | Yes    |
+| **patch**     | Yes     | Yes     | Yes    |
+| **sed**       | Yes     | Yes     | Yes    |
+| **tar**       | Yes     | Yes     | Yes    |
 
 *Coreutils won't accept fPIE and related args for dynamic compile*
 
