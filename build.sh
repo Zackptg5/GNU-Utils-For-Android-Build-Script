@@ -19,21 +19,6 @@ usage () {
   echo " "
   exit 1
 }
-cp_strip () {
-  echogreen "Processing files..."
-  mkdir $DIR/$LARCH 2>/dev/null
-  for i in $(find $DIR/$LBIN -type f ! -size 0 -exec grep -IL . "{}" \;); do
-    if $LINARO; then
-      $target_host-strip $i 2>/dev/null
-    elif $NDK; then
-      $STRIP $i 2>/dev/null
-    else
-      strip $i 2>/dev/null
-    fi
-  done
-  rm -rf $DIR/$LARCH/$LBIN
-  mv -f $DIR/$LBIN $DIR/$LARCH
-}
 patch_file() {
   echogreen "Applying patch"
   local DEST=$(basename $1)
@@ -149,9 +134,7 @@ for LARCH in $ARCH; do
     tar -xf $LBIN-$VER.tar.$EXT
 
     export PATH=$OPATH
-    export GCC=$target_host-gcc
     if $NDK; then
-      export PATH=$ANDROID_TOOLCHAIN:$PATH
       export AR=$target_host-ar
       export AS=$target_host-as
       export CC=$target_host-clang
@@ -161,6 +144,7 @@ for LARCH in $ARCH; do
       export LD=$target_host-ld
       export RANLIB=$target_host-ranlib
       export STRIP=$target_host-strip
+      export PATH=$ANDROID_TOOLCHAIN:$PATH
       [ "$LARCH" == "arm" ] && target_host=armv7a-linux-androideabi
       # Create sometimes needed symlinks
       ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$CC
@@ -190,15 +174,15 @@ for LARCH in $ARCH; do
     [ -f $DIR/$LBIN.patch ] && patch_file $DIR/$LBIN.patch
     if $STATIC; then
       CFLAGS='-static -O2'
-      LDFLAGS='-static'
+      LDFLAGS='-static -s'
       $NDK && [ -f $DIR/ndk_static_patches/$LBIN.patch ] && patch_file $DIR/ndk_static_patches/$LBIN.patch
     else
       if ! $NDK && [ "$LBIN" == "coreutils" ]; then
         CFLAGS='-O2'
-        LDFLAGS=''
+        LDFLAGS='-s'
       else
         CFLAGS='-O2 -fPIE -fPIC'
-        LDFLAGS='-pie'
+        LDFLAGS='-s -pie'
       fi
       $NDK || LDFLAGS="$LDFLAGS -Wl,-dynamic-linker,/system/bin/$LINKER"
     fi
@@ -211,10 +195,10 @@ for LARCH in $ARCH; do
     
     # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms
     case $LBIN in
-      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "coreutils") ./configure --disable-nls --without-gmp --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
-      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      *) ./configure --disable-nls --without-gmp --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "coreutils") ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
+      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      *) ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
     esac
     [ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 
@@ -224,7 +208,8 @@ for LARCH in $ARCH; do
     case $LBIN in
       "bc") sed -i -e '\|./fbc -c|d' -e 's|$(srcdir)/fix-libmath_h|cp -f ../../bc_libmath.h $(srcdir)/libmath.h|' bc/Makefile;;
       "coreutils") [ ! "$(grep "#define HAVE_MKFIFO 1" lib/config.h)" ] && echo "#define HAVE_MKFIFO 1" >> lib/config.h;;
-    esac    
+    esac
+    
     make -j$JOBS
     [ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
     
@@ -233,9 +218,8 @@ for LARCH in $ARCH; do
     # Temporary PIE patch for now
     [ "$LBIN" == "coreutils" -a ! $STATIC ] && for i in src/coreutils src/sort src/timeout; do sed -i "s/\x02\x00\xb7\x00/\x03\x00\xb7\x00/" $i; done
 
-    mkdir $DIR/$LBIN 2>/dev/null
-    make install DESTDIR=$DIR/$LBIN
-    cp_strip
+    mkdir $DIR/$LARCH/$LBIN 2>/dev/null
+    make install -j$JOBS DESTDIR=$DIR/$LARCH/$LBIN
     echogreen "$LBIN built sucessfully and can be found at: $DIR/$LARCH"
     cd $DIR
   done
