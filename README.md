@@ -18,7 +18,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | --------- |:-------:|:-------:|:------:|
 | bash      | *Static*  | Yes     | Yes    |
 | bc        | Yes     | Yes     | Yes    |
-| coreutils | No      | *Static*  | *Static* | *Coreutils won't accept fPIE*
+| coreutils | No      | *Static*  | *Static* |
 | cpio      | Yes     | Yes     | Yes    |
 | diffutils | *Static*  | Yes     | Yes    |
 | ed        | Yes     | Yes     | Yes    |
@@ -30,6 +30,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | patch     | Yes     | Yes     | Yes    |
 | sed       | Yes     | Yes     | Yes    |
 | tar       | Yes     | Yes     | Yes    |
+*Coreutils won't accept fPIE and related args for dynamic compile*
 
 ## Credits
 
