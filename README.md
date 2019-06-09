@@ -30,6 +30,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | patch     | Yes     | Yes     | Yes    |
 | sed       | Yes     | Yes     | Yes    |
 | tar       | Yes     | Yes     | Yes    |
+
 *Coreutils won't accept fPIE and related args for dynamic compile*
 
 ## Credits
