@@ -134,6 +134,7 @@ for LARCH in $ARCH; do
     tar -xf $LBIN-$VER.tar.$EXT
 
     export PATH=$OPATH
+    unset AR AS LD RANLIB STRIP CC GCC CXX GXX
     if $NDK || $LINARO; then
       export AR=$target_host-ar
       export AS=$target_host-as
