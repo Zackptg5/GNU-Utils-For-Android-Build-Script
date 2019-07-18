@@ -27,7 +27,7 @@ patch_file() {
   [ $? -ne 0 ] && { echored "Patching failed! Did you verify line numbers? See README for more info"; exit 1; }
 }
 bash_patches() {
-  echogreen "Applying patches"
+  echogreen "Applying patch$LARCH/$LBINes"
   local PVER=$(echo $VER | sed 's/\.//')
   for i in {001..050}; do
     wget http://ftp.gnu.org/gnu/bash/bash-$VER-patches/bash$PVER-$i 2>/dev/null
@@ -65,7 +65,7 @@ while true; do
     API=*|STATIC=*|NDK=*|BIN=*|ARCH=*) eval $(echo "$1" | sed -e 's/=/="/' -e 's/$/"/' -e 's/,/ /g'); shift;;
     *) echored "Invalid option: $1!"; usage;;
   esac
-done
+done$LARCH/$LBIN
 IFS=$OIFS
 
 case $API in
@@ -78,7 +78,7 @@ if [ -f /proc/cpuinfo ]; then
 elif [ ! -z $(which sysctl) ]; then
   JOBS=$(sysctl -n hw.ncpu)
 else
-  JOBS=2
+  JOBS=2$LARCH/$LBIN
 fi
 
 [ -z $NDK ] && NDK=false
@@ -223,9 +223,9 @@ for LARCH in $ARCH; do
     # Temporary PIE patch for now
     [ "$LBIN" == "coreutils" -a ! $STATIC ] && for i in src/coreutils src/sort src/timeout; do sed -i "s/\x02\x00\xb7\x00/\x03\x00\xb7\x00/" $i; done
 
-    mkdir $DIR/$LARCH/$LBIN 2>/dev/null
-    make install -j$JOBS DESTDIR=$DIR/$LARCH/$LBIN
-    echogreen "$LBIN built sucessfully and can be found at: $DIR/$LARCH"
+    mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
+    make install -j$JOBS DESTDIR=$DIR/out/$LARCH/$LBIN
+    echogreen "$LBIN built sucessfully and can be found at: $DIR/out/$LARCH"
     cd $DIR
   done
 done
