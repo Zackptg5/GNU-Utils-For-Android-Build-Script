@@ -11,7 +11,7 @@ usage () {
   echogreen "NDK=      (Default: false) (Valid options are: true, false)"
   echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
-  echogreen "STATIC=   (Default: false) (Valid options are: true, false)"
+  echogreen "STATIC=   (Default: true) (Valid options are: true, false)"
   echogreen "API=   (Default: false) (Valid options are: 21, 22, 23, 24, 26, 27, 28)"
   echogreen "           Note that you can put as many of these as you want together as long as they're comma separated"
   echogreen "           Ex: BIN=cpio,gzip,tar"
@@ -53,7 +53,7 @@ TEXTGREEN=$(tput setaf 2)
 TEXTRED=$(tput setaf 1)
 DIR=`pwd`
 LINARO=false
-STATIC=false
+STATIC=true
 NDKVER=r19c
 MAXAPI=28
 export OPATH=$PATH
@@ -115,7 +115,7 @@ for LARCH in $ARCH; do
       "diffutils") EXT=xz; VER=3.7;;
       "ed") EXT=lz; VER=1.15;;
       "findutils") EXT=gz; VER=4.6.0; [ $LAPI -lt 23 ] && LAPI=23;;
-      "gawk") EXT=xz; VER=5.0.0;;
+      "gawk") EXT=xz; VER=5.0.1;;
       "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23;;
       "gzip") EXT=xz; VER=1.10;;
       "ncurses") EXT=gz; VER=6.1;;
