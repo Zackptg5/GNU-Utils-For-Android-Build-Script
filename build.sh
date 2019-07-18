@@ -134,34 +134,38 @@ for LARCH in $ARCH; do
     tar -xf $LBIN-$VER.tar.$EXT
 
     export PATH=$OPATH
-    if $NDK; then
+    if $NDK || $LINARO; then
       export AR=$target_host-ar
       export AS=$target_host-as
-      export CC=$target_host-clang
-      export GCC=$target_host-gcc
-      export CXX=$target_host-clang++
-      export GXX=$target_host-g++
       export LD=$target_host-ld
       export RANLIB=$target_host-ranlib
       export STRIP=$target_host-strip
-      export PATH=$ANDROID_TOOLCHAIN:$PATH
-      [ "$LARCH" == "arm" ] && target_host=armv7a-linux-androideabi
-      # Create sometimes needed symlinks
-      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$CC
-      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$CCX
-      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$GCC
-      ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$GXX
-      [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
-    elif $LINARO; then
-      [ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-      [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-      export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
+      if $NDK; then
+        export CC=$target_host-clang
+        export GCC=$target_host-gcc
+        export CXX=$target_host-clang++
+        export GXX=$target_host-g++
+        export PATH=$ANDROID_TOOLCHAIN:$PATH
+        [ "$LARCH" == "arm" ] && target_host=armv7a-linux-androideabi
+        # Create sometimes needed symlinks
+        ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$CC
+        ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$CCX
+        ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$GCC
+        ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$GXX
+        [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
+      elif $LINARO; then
+        [ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
+        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
+        export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
+        export CC=$target_host-gcc
+        export CXX=$target_host-g++
+      fi
     fi
-    
-    cd $DIR/$LBIN-$VER
     
     # Run patches and configure
     echogreen "Configuring for $LARCH"
+    unset FLAGS
+    cd $DIR/$LBIN-$VER
     case $LBIN in
       "bash") $STATIC && FLAGS="--enable-static-link "; bash_patches || exit 1;;
       "coreutils"|"sed") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/stdio.in.h; };;
@@ -214,7 +218,7 @@ for LARCH in $ARCH; do
     [ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
     
     # Fix paths in updatedb
-    [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|LIBEXECDIR=/usr/local/libexec|LIBEXECDIR=/system/bin|" -e "s|BINDIR=/usr/local/bin|BINDIR=/system/bin|" -e "s|LOCATE_DB=/usr/local/var/locatedb|LOCATE_DB=/sdcard/coreutils/locatedb|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/coreutils/tmp|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/coreutils/tmp|" locate/updatedb
+    [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|LIBEXECDIR=/usr/local/libexec|LIBEXECDIR=/system/bin|" -e "s|BINDIR=/usr/local/bin|BINDIR=/system/bin|" -e "s|LOCATE_DB=/usr/local/var/locatedb|LOCATE_DB=/sdcard/coreutils/locatedb|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/coreutils/tmp|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/coreutils/tmp|" -e "s|SHELL=\".*\"|SHELL=\"/system/bin/sh\"|" locate/updatedb
     # Temporary PIE patch for now
     [ "$LBIN" == "coreutils" -a ! $STATIC ] && for i in src/coreutils src/sort src/timeout; do sed -i "s/\x02\x00\xb7\x00/\x03\x00\xb7\x00/" $i; done
 
