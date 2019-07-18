@@ -74,7 +74,7 @@ case $API in
 esac
 
 if [ -f /proc/cpuinfo ]; then
-  JOBS=$(grep flags /proc/cpuinfo |wc -l)
+  JOBS=$(grep flags /proc/cpuinfo | wc -l)
 elif [ ! -z $(which sysctl) ]; then
   JOBS=$(sysctl -n hw.ncpu)
 else

@@ -33,6 +33,10 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 
 *Coreutils won't accept fPIE and related args for dynamic compile*
 
+## Future Ideas
+
+* Compile all as dynamic with shared libraries rather than static compile
+
 ## Credits
 
 * [GNU](https://www.gnu.org/software/)
