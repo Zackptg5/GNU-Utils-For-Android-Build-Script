@@ -32,6 +32,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **tar**       | Yes     | Yes     | Yes    |
 
 *Coreutils won't accept fPIE and related args for dynamic compile*
+*Coreutils sort and timeout binaries have what appears to be seccomp problems and so they're left out of the combined binary*
 
 ## Future Ideas
 
