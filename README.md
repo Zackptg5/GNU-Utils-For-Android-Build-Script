@@ -31,6 +31,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **sed**       | Yes     | Yes     | Yes    |
 | **tar**       | Yes     | Yes     | Yes    |
 
+*NDK won't compile bash as static for arm64 architecture for reasons still unknown
 *Coreutils won't accept fPIE and related args for dynamic compile*
 *Coreutils sort and timeout binaries have what appears to be seccomp problems and so they're left out of the combined binary*
 
