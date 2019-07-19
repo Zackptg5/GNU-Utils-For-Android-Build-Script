@@ -27,7 +27,7 @@ patch_file() {
   [ $? -ne 0 ] && { echored "Patching failed! Did you verify line numbers? See README for more info"; exit 1; }
 }
 bash_patches() {
-  echogreen "Applying patch$LARCH/$LBINes"
+  echogreen "Applying patches"
   local PVER=$(echo $VER | sed 's/\.//')
   for i in {001..050}; do
     wget http://ftp.gnu.org/gnu/bash/bash-$VER-patches/bash$PVER-$i 2>/dev/null
@@ -65,7 +65,7 @@ while true; do
     API=*|STATIC=*|NDK=*|BIN=*|ARCH=*) eval $(echo "$1" | sed -e 's/=/="/' -e 's/$/"/' -e 's/,/ /g'); shift;;
     *) echored "Invalid option: $1!"; usage;;
   esac
-done$LARCH/$LBIN
+done
 IFS=$OIFS
 
 case $API in
@@ -78,7 +78,7 @@ if [ -f /proc/cpuinfo ]; then
 elif [ ! -z $(which sysctl) ]; then
   JOBS=$(sysctl -n hw.ncpu)
 else
-  JOBS=2$LARCH/$LBIN
+  JOBS=2
 fi
 
 [ -z $NDK ] && NDK=false
