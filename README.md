@@ -10,6 +10,10 @@ sudo apt install build-essential gcc-multilib libgnutls28-dev lzip # For debian/
 ./build.bash --help # For more info on usage
 ```
 
+## Note
+
+If ftp.gnu.org is down, replace all instances of that in build script with mirrors.kernel.org
+
 ## Compatibility
 
 The below table notes if the binary is compatible with android ndk, linaro, or gcc compilers. If static or dynamic is listed, then only that link method is working
