@@ -12,7 +12,7 @@ sudo apt install build-essential gcc-multilib libgnutls28-dev lzip # For debian/
 
 ## Note
 
-If ftp.gnu.org is down, replace all instances of that in build script with mirrors.kernel.org
+If mirrors.kernel.org is down, replace all instances of that in build script with ftp.gnu.org
 
 ## Compatibility
 

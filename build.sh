@@ -30,7 +30,7 @@ bash_patches() {
   echogreen "Applying patches"
   local PVER=$(echo $VER | sed 's/\.//')
   for i in {001..050}; do
-    wget http://ftp.gnu.org/gnu/bash/bash-$VER-patches/bash$PVER-$i 2>/dev/null
+    wget http://http://mirrors.kernel.org/gnu/bash/bash-$VER-patches/bash$PVER-$i 2>/dev/null
     if [ -f "bash$PVER-$i" ]; then
       patch -p0 -i bash$PVER-$i
       rm -f bash$PVER-$i
@@ -125,12 +125,12 @@ for LARCH in $ARCH; do
       *) echored "Invalid binary specified!"; usage;;
     esac
 
-    [[ $(wget -S --spider ftp.gnu.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT 2>&1 | grep 'HTTP/1.1 200 OK') ]] || { echored "Invalid $LBIN VER! Check this: ftp.gnu.org/gnu/$LBIN for valid versions!"; exit 1; }
+    [[ $(wget -S --spider http://mirrors.kernel.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT 2>&1 | grep 'HTTP/1.1 200 OK') ]] || { echored "Invalid $LBIN VER! Check this: http://mirrors.kernel.org/gnu/$LBIN for valid versions!"; exit 1; }
 
     # Setup
     echogreen "Fetching $LBIN $VER"
     rm -rf $LBIN-$VER
-    [ -f "$LBIN-$VER.tar.$EXT" ] || wget ftp.gnu.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT
+    [ -f "$LBIN-$VER.tar.$EXT" ] || wget http://mirrors.kernel.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT
     tar -xf $LBIN-$VER.tar.$EXT
 
     export PATH=$OPATH
@@ -200,10 +200,11 @@ for LARCH in $ARCH; do
     
     # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms
     case $LBIN in
-      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "coreutils") ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
-      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      *) ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "coreutils") ./configure --disable-nls --without-gmp --disable-stripping --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
+      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping --prefix=/system --datarootdir=/sdcard/gnu/share CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping --prefix=/system --datarootdir=/sdcard/gnu/share CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "findutils") ./configure --disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      *) ./configure --disable-nls --without-gmp --disable-stripping --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
     esac
     [ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 
@@ -219,7 +220,7 @@ for LARCH in $ARCH; do
     [ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
     
     # Fix paths in updatedb
-    [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|LIBEXECDIR=/usr/local/libexec|LIBEXECDIR=/system/bin|" -e "s|BINDIR=/usr/local/bin|BINDIR=/system/bin|" -e "s|LOCATE_DB=/usr/local/var/locatedb|LOCATE_DB=/sdcard/coreutils/locatedb|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/coreutils/tmp|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/coreutils/tmp|" -e "s|SHELL=\".*\"|SHELL=\"/system/bin/sh\"|" locate/updatedb
+    [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|SHELL=\".*\"|SHELL=\"/system/bin/sh\"|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/gnu/tmp|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/gnu/tmp|" locate/updatedb
     # Temporary PIE patch for now
     [ "$LBIN" == "coreutils" -a ! $STATIC ] && for i in src/coreutils src/sort src/timeout; do sed -i "s/\x02\x00\xb7\x00/\x03\x00\xb7\x00/" $i; done
 
