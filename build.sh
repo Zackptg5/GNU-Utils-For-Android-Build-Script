@@ -200,11 +200,11 @@ for LARCH in $ARCH; do
     
     # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms
     case $LBIN in
-      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "coreutils") ./configure --disable-nls --without-gmp --disable-stripping --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
-      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping --prefix=/system --datarootdir=/sdcard/gnu/share CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping --prefix=/system --datarootdir=/sdcard/gnu/share CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "coreutils") ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
+      "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
       "findutils") ./configure --disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      *) ./configure --disable-nls --without-gmp --disable-stripping --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      *) ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
     esac
     [ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 
@@ -226,7 +226,6 @@ for LARCH in $ARCH; do
 
     mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
     make install -j$JOBS DESTDIR=$DIR/out/$LARCH/$LBIN
-    [ "$LBIN" == "coreutils" ] && { rm -rf $DIR/out/$LARCH/$LBIN/system/bin/coreutils 2>/dev/null && cp -f src/coreutils $DIR/out/$LARCH/$LBIN/system/bin/coreutils; }
     echogreen "$LBIN built sucessfully and can be found at: $DIR/out/$LARCH"
     cd $DIR
   done
