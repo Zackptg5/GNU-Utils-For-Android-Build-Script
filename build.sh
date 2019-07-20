@@ -226,6 +226,7 @@ for LARCH in $ARCH; do
 
     mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
     make install -j$JOBS DESTDIR=$DIR/out/$LARCH/$LBIN
+    [ "$LBIN" == "coreutils" ] && { rm -rf $DIR/out/$LARCH/$LBIN/system/bin/coreutils 2>/dev/null && cp -f src/coreutils $DIR/out/$LARCH/$LBIN/system/bin/coreutils; }
     echogreen "$LBIN built sucessfully and can be found at: $DIR/out/$LARCH"
     cd $DIR
   done
