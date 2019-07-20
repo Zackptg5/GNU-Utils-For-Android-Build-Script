@@ -1,5 +1,3 @@
-# Deprecated - [See here for up to date build script](https://github.com/Zackptg5/GNU-Utils-For-Android-Build-Script)
-
 ## GNU Utils for Android Build Script ##
 
 This will build any of the following static GNU binaries:<br/>
