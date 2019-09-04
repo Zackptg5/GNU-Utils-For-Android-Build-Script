@@ -33,11 +33,12 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **ncurses**   | Yes     | Yes     | Yes    |
 | **patch**     | Yes     | Yes     | Yes    |
 | **sed**       | Yes     | Yes     | Yes    |
-| **tar**       | Yes     | Yes     | Yes    |
+| **tar**       | No      | Yes     | Yes    |
 
 *NDK won't compile bash as static for arm64 architecture for reasons still unknown*<br/>
 *Coreutils won't accept fPIE and related args for dynamic compile*<br/>
 *Coreutils sort and timeout binaries have what appears to be seccomp problems and so they're left out of the combined binary*<br/>
+*"FORTIFY: %n not allowed on Android. Aborted" error will occur when tar is compiled with NDK*<br/>
 
 ## Future Ideas
 
@@ -53,7 +54,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 * [Termux](https://github.com/termux/termux-packages/tree/master/packages/bash)
 * [ATechnoHazard and koro666](https://github.com/ATechnoHazard/bash_patches)
 * [BlissRoms](https://github.com/BlissRoms/platform_external_bash)
-  
+
 ## License
 
   MIT
