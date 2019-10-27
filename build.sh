@@ -30,7 +30,7 @@ bash_patches() {
   echogreen "Applying patches"
   local PVER=$(echo $VER | sed 's/\.//')
   for i in {001..050}; do
-    wget http://http://mirrors.kernel.org/gnu/bash/bash-$VER-patches/bash$PVER-$i 2>/dev/null
+    wget http://mirrors.kernel.org/gnu/bash/bash-$VER-patches/bash$PVER-$i 2>/dev/null
     if [ -f "bash$PVER-$i" ]; then
       patch -p0 -i bash$PVER-$i
       rm -f bash$PVER-$i
