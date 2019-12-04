@@ -244,7 +244,7 @@ for LARCH in $ARCH; do
     [ -f $DIR/$LBIN.patch ] && patch_file $DIR/$LBIN.patch
     if $STATIC; then
       CFLAGS='-static -O2'
-      LDFLAGS='-shared -static'
+      LDFLAGS='-static'
       $NDK && [ -f $DIR/ndk_static_patches/$LBIN.patch ] && patch_file $DIR/ndk_static_patches/$LBIN.patch
     else
       CFLAGS='-O2 -fPIE -fPIC'
