@@ -205,7 +205,7 @@ for LARCH in $ARCH; do
         ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$GXX
         [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
       elif $LINARO; then
-				if [ "$LARCH" == "arm" ]; then
+				if [ "$LARCH" == "arm" ] || [ "$LBIN" == "coreutils" ]; then
 					[ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
 	        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
 	        export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
