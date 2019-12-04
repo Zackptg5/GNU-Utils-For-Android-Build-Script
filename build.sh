@@ -128,7 +128,7 @@ if [ -f /proc/cpuinfo ]; then
 elif [ ! -z $(which sysctl) ]; then
   JOBS=$(sysctl -n hw.ncpu)
 else
-  JOBS=2 -Wl,--allow-multiple-definition
+  JOBS=2
 fi
 
 [ -z $NDK ] && NDK=false
