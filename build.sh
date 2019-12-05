@@ -261,7 +261,7 @@ for LARCH in $ARCH; do
     # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms, grep needs pcre
     case $LBIN in
       "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "coreutils") $NDK && ./configure $FLAGS--disable-nls --without-gmp --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks || ./configure $FLAGS--disable-nls --without-gmp --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
+      "coreutils") $NDK && ./configure $FLAGS--disable-nls --without-gmp --without-selinux --enable-no-install-program=stdbuf --enable-single-binary=symlinks --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure $FLAGS--disable-nls --without-gmp --without-selinux --with-gnu-ld --enable-no-install-program=stdbuf --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
       "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
 			"findutils") ./configure $FLAGS--disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
 			"grep") build_zlib
@@ -286,7 +286,8 @@ for LARCH in $ARCH; do
     # Fix paths in updatedb
     [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|SHELL=\".*\"|SHELL=\"/system/bin/sh\"|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/gnu/tmp /sdcard/gnu/var|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/gnu/tmp|" locate/updatedb
 
-    mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
+		rm -rf $DIR/out/$LARCH/$LBIN 2>/dev/null
+		mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
     make install -j$JOBS DESTDIR=$DIR/out/$LARCH/$LBIN
     echogreen "$LBIN built sucessfully and can be found at: $DIR/out/$LARCH"
     cd $DIR

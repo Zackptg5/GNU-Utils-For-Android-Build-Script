@@ -37,7 +37,6 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 
 *NDK won't compile bash as static for arm64 architecture for reasons still unknown*<br/>
 *Coreutils sort and timeout binaries have what appears to be seccomp problems when compiled without ndk statically and so they're left out of the combined binary*<br/>
-* Coreutils arm64 linaro make install doesn't work properly so just grab the binary from from src folder after it's done
 *Findutils no longer compiles static without ndk - not sure what updates broke it.<br/>
 *Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them
 
