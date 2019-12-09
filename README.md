@@ -1,7 +1,7 @@
 ## GNU Utils for Android Build Script ##
 
 This will build any of the following static GNU binaries:<br/>
-bash, bc (also includes dc), coreutils (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes find, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
+bash, bc (also includes dc), coreutils (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes find, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep) (has full perl regex support), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
 
 ## Build instructions
 
@@ -22,23 +22,23 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | --------- |:-------:|:-------:|:------:|
 | **bash**      | *Static*  | Yes     | Yes    |
 | **bc**        | Yes     | Yes     | Yes    |
-| **coreutils** | No      | *Static*  | *Static* |
+| **coreutils** | *Dynamic* | *Static*  | *Static*  |
 | **cpio**      | Yes     | Yes     | Yes    |
-| **diffutils** | *Static*  | Yes     | Yes    |
+| **diffutils** | Yes     | Yes     | Yes    |
 | **ed**        | Yes     | Yes     | Yes    |
-| **findutils** | No      | Yes     | Yes    |
+| **findutils** | Yes     | *Dynamic* | *Dynamic* |
 | **gawk**      | *Static*  | Yes     | Yes    |
 | **grep**      | Yes       | Yes     | Yes    |
 | **gzip**      | Yes     | Yes     | Yes    |
 | **ncurses**   | Yes     | Yes     | Yes    |
 | **patch**     | Yes     | Yes     | Yes    |
 | **sed**       | Yes     | Yes     | Yes    |
-| **tar**       | No      | Yes     | Yes    |
+| **tar**       | Yes     | Yes     | Yes    |
 
 *NDK won't compile bash as static for arm64 architecture for reasons still unknown*<br/>
-*Coreutils won't accept fPIE and related args for dynamic compile*<br/>
-*Coreutils sort and timeout binaries have what appears to be seccomp problems and so they're left out of the combined binary*<br/>
-*"FORTIFY: %n not allowed on Android. Aborted" error will occur when tar is compiled with NDK*<br/>
+*Coreutils sort and timeout binaries have what appears to be seccomp problems when compiled without ndk statically and so they're left out of the combined binary*<br/>
+*Findutils no longer compiles static without ndk - not sure what updates broke it.<br/>
+*Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them
 
 ## Future Ideas
 

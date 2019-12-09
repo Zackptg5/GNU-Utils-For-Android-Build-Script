@@ -12,7 +12,7 @@ usage () {
   echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
   echogreen "STATIC=   (Default: true) (Valid options are: true, false)"
-  echogreen "API=   (Default: false) (Valid options are: 21, 22, 23, 24, 26, 27, 28)"
+  echogreen "API=   (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29)"
   echogreen "           Note that you can put as many of these as you want together as long as they're comma separated"
   echogreen "           Ex: BIN=cpio,gzip,tar"
   echogreen "           Also note that coreutils includes advanced cp/mv (adds progress bar functionality with -g flag"
@@ -41,11 +41,61 @@ bash_patches() {
   for i in $DIR/bash_patches/*; do
     local PFILE=$(basename $i)
     cp -f $i $PFILE
-    sed -i "s/4.4/$VER/g" $PFILE    
+    sed -i "s/4.4/$VER/g" $PFILE
     patch -p0 -i $PFILE
     [ $? -ne 0 ] && { echored "Patching failed!"; return 1; }
     rm -f $PFILE
   done
+}
+build_zlib() {
+	cd $DIR
+	rm -rf zlib-$ZVER 2>/dev/null
+	echogreen "Building ZLib..."
+	[ -f "zlib-$ZVER.tar.gz" ] || wget http://zlib.net/zlib-$ZVER.tar.gz
+	tar -xf zlib-$ZVER.tar.gz
+	cd zlib-$ZVER
+	./configure --static --prefix=
+	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
+	make -j$JOBS
+	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
+	make install -j$JOBS DESTDIR=$DIR/$LBIN-$VER/extras
+	cd $DIR/$LBIN-$VER
+}
+build_bzip2() {
+	cd $DIR
+	rm -rf bzip2-[0-9]* 2>/dev/null
+	echogreen "Building BZip2..."
+	[ -f "bzip2-latest.tar.gz" ] || wget https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz
+	tar -xf bzip2-latest.tar.gz
+	cd bzip2-[0-9]*
+	sed -i -e '/# To assist in cross-compiling/,/LDFLAGS=/d' -e "s/CFLAGS=/CFLAGS=$CFLAGS /" -e 's/bzip2recover test/bzip2recover/' Makefile
+	export LDFLAGS
+	make -j$JOBS
+	export -n LDFLAGS
+	[ $? -eq 0 ] || { echored "Bzip2 build failed!"; exit 1; }
+	make install -j$JOBS PREFIX=$DIR/$LBIN-$VER/extras
+	cd $DIR/$LBIN-$VER
+	$STRIP extras/bin/bunzip2 extras/bin/bzcat extras/bin/bzip2 extras/bin/bzip2recover
+}
+build_pcre() {
+	[ "$1" == -s ] && local SEP=true || local SEP=false
+	cd $DIR
+	rm -rf pcre-$PVER 2>/dev/null
+	echogreen "Building PCRE..."
+	[ -f "cre-$PVER.tar.bz2" ] || wget https://ftp.pcre.org/pub/pcre/pcre-$PVER.tar.bz2
+	tar -xf pcre-$PVER.tar.bz2
+	cd pcre-$PVER
+	# Binary compiles as dynamic regardless of flags for some reason, but that doesn't matter for grep compile - just need include and libs
+	./configure $FLAGS--prefix=/system --enable-unicode-properties --enable-jit --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --enable-pcregrep-libbz2 --host=$target_host CFLAGS="$CFLAGS -I$DIR/$LBIN-$VER/extras/include" LDFLAGS="$LDFLAGS -L$DIR/$LBIN-$VER/extras/lib"
+	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
+	make -j$JOBS
+	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
+	if $SEP; then
+		make install -j$JOBS DESTDIR=$DIR/$LBIN-$VER/pcre
+	else
+		make install -j$JOBS DESTDIR=$DIR/$LBIN-$VER/extras
+	fi
+	cd $DIR/$LBIN-$VER
 }
 
 TEXTRESET=$(tput sgr0)
@@ -54,10 +104,10 @@ TEXTRED=$(tput setaf 1)
 DIR=`pwd`
 LINARO=false
 STATIC=true
-NDKVER=r19c
-MAXAPI=28
+NDKVER=r20b
+MAXAPI=29
 export OPATH=$PATH
-OIFS=$IFS; IFS=\|; 
+OIFS=$IFS; IFS=\|;
 while true; do
   case "$1" in
     -h|--help) usage;;
@@ -69,7 +119,7 @@ done
 IFS=$OIFS
 
 case $API in
-  21|22|23|24|26|27|28) ;;
+  21|22|23|24|26|27|28|29) ;;
   *) API=21;;
 esac
 
@@ -114,9 +164,9 @@ for LARCH in $ARCH; do
       "cpio") EXT=gz; VER=2.12;;
       "diffutils") EXT=xz; VER=3.7;;
       "ed") EXT=lz; VER=1.15;;
-      "findutils") EXT=gz; VER=4.6.0; [ $LAPI -lt 23 ] && LAPI=23;;
+      "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
       "gawk") EXT=xz; VER=5.0.1;;
-      "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23;;
+      "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23; PVER=8.43; ZVER=1.2.11;;
       "gzip") EXT=xz; VER=1.10;;
       "ncurses") EXT=gz; VER=6.1;;
       "patch") EXT=xz; VER=2.7.6;;
@@ -150,20 +200,26 @@ for LARCH in $ARCH; do
         [ "$LARCH" == "arm" ] && target_host=armv7a-linux-androideabi
         # Create sometimes needed symlinks
         ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$CC
-        ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$CCX
+        ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$CXX
         ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang $ANDROID_TOOLCHAIN/$GCC
         ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$GXX
         [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
       elif $LINARO; then
-        [ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-        export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
+				if [ "$LARCH" == "arm" ] || [ "$LBIN" == "coreutils" ]; then
+					[ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
+	        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
+	        export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
+				else
+					[ -f gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD" -O gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz; }
+	        [ -d gcc-arm-8.3-2019.03-x86_64-$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz; }
+	        export PATH=`pwd`/gcc-arm-8.3-2019.03-x86_64-$target_host/bin:$PATH
+				fi
         export CC=$target_host-gcc
         export CXX=$target_host-g++
       fi
     fi
-    
-    # Run patches and configure
+
+    # Run patches/fixes and configure
     echogreen "Configuring for $LARCH"
     unset FLAGS
     cd $DIR/$LBIN-$VER
@@ -174,37 +230,45 @@ for LARCH in $ARCH; do
     esac
     # Fix for mktime_internal build error for non-ndk arm/64 cross-compile
     case $LBIN in
-      "coreutils"|"diffutils"|"patch"|"tar") $NDK || sed -i -e '/WANT_MKTIME_INTERNAL=0/i\WANT_MKTIME_INTERNAL=1\n$as_echo "#define NEED_MKTIME_INTERNAL 1" >>confdefs.h' -e '/^ *WANT_MKTIME_INTERNAL=0/,/^ *fi/d' configure;;
-    esac
+      "coreutils"|"diffutils"|"findutils"|"patch"|"tar") $NDK || sed -i -e '/WANT_MKTIME_INTERNAL=0/i\WANT_MKTIME_INTERNAL=1\n$as_echo "#define NEED_MKTIME_INTERNAL 1" >>confdefs.h' -e '/^ *WANT_MKTIME_INTERNAL=0/,/^ *fi/d' configure;;
+		esac
+		# Fix %n issue due to these binaries using old gnulib (This was in Jan 2019: http://git.savannah.gnu.org/gitweb/?p=gnulib.git;a=commit;h=6c0f109fb98501fc8d65ea2c83501b45a80b00ab)
+		case $LBIN in
+			"cpio"|"tar") sed -i 's/!defined __UCLIBC__)/!defined __UCLIBC__) || defined __ANDROID__/' gnu/vasnprintf.c;;
+			"gzip") sed -i 's/!defined __UCLIBC__)/!defined __UCLIBC__) || defined __ANDROID__/' lib/vasnprintf.c;;
+		esac
+		# Fix for minus_zero duplication error in NDK
+		case $LBIN in
+			"coreutils") $NDK && sed -i -e '/if (!num && negative)/d' -e "/return minus_zero/d" -e "/DOUBLE minus_zero = -0.0/d" lib/strtod.c;;
+		esac
     [ -f $DIR/$LBIN.patch ] && patch_file $DIR/$LBIN.patch
     if $STATIC; then
       CFLAGS='-static -O2'
-      LDFLAGS='-static -s'
+      LDFLAGS='-static'
       $NDK && [ -f $DIR/ndk_static_patches/$LBIN.patch ] && patch_file $DIR/ndk_static_patches/$LBIN.patch
     else
-      if ! $NDK && [ "$LBIN" == "coreutils" ]; then
-        CFLAGS='-O2'
-        LDFLAGS='-s'
-      else
-        CFLAGS='-O2 -fPIE -fPIC'
-        LDFLAGS='-s -pie'
-      fi
+      CFLAGS='-O2 -fPIE -fPIC'
+      LDFLAGS='-s -pie'
       $NDK || LDFLAGS="$LDFLAGS -Wl,-dynamic-linker,/system/bin/$LINKER"
     fi
-    
+
     case $LARCH in
       "arm") CFLAGS="$CFLAGS -mfloat-abi=softfp -mthumb"; LDFLAGS="$LDFLAGS -march=armv7-a -Wl,--fix-cortex-a8";;
-      "i686") CFLAGS="$CFLAGS -march=i686 -mtune=intel -mssse3 -mfpmath=sse -m32";;
+      "i686") CFLAGS="$CFLAGS -march=i686 -mtune=intel -mssse3 -mfpmath=sse -m32"; [ -z $FLAGS ] && FLAGS="TIME_T_32_BIT_OK=yes " || FLAGS="$FLAGS TIME_T_32_BIT_OK=yes ";;
       "x86_64") CFLAGS="$CFLAGS -march=x86-64 -msse4.2 -mpopcnt -m64 -mtune=intel";;
     esac
-    
-    # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms
+
+    # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms, grep needs pcre
     case $LBIN in
       "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "coreutils") ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout;;
+      "coreutils") $NDK && ./configure $FLAGS--disable-nls --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure $FLAGS--disable-nls --without-gmp --with-gnu-ld --enable-no-install-program=stdbuf --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
       "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "findutils") ./configure --disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      *) ./configure --disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+			"findutils") ./configure $FLAGS--disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+			"grep") build_zlib
+							build_bzip2
+							build_pcre -s
+							./configure $FLAGS--disable-shared --enable-perl-regexp --disable-nls --host=$target_host CFLAGS="$CFLAGS -I$DIR/$LBIN-$VER/pcre/system/include" LDFLAGS="$LDFLAGS -L$DIR/$LBIN-$VER/pcre/system/lib";;
+			*) ./configure $FLAGS--disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
     esac
     [ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 
@@ -215,16 +279,15 @@ for LARCH in $ARCH; do
       "bc") sed -i -e '\|./fbc -c|d' -e 's|$(srcdir)/fix-libmath_h|cp -f ../../bc_libmath.h $(srcdir)/libmath.h|' bc/Makefile;;
       "coreutils") [ ! "$(grep "#define HAVE_MKFIFO 1" lib/config.h)" ] && echo "#define HAVE_MKFIFO 1" >> lib/config.h;;
     esac
-    
+
     make -j$JOBS
     [ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
-    
+
     # Fix paths in updatedb
     [ "$LBIN" == "findutils" ] && sed -i -e "s|/usr/bin|/system/bin|g" -e "s|SHELL=\".*\"|SHELL=\"/system/bin/sh\"|" -e "s|# The database file to build.|# The database file to build.\nmkdir -p /sdcard/gnu/tmp /sdcard/gnu/var|" -e "s|TMPDIR=/tmp|TMPDIR=/sdcard/gnu/tmp|" locate/updatedb
-    # Temporary PIE patch for now
-    [ "$LBIN" == "coreutils" -a ! $STATIC ] && for i in src/coreutils src/sort src/timeout; do sed -i "s/\x02\x00\xb7\x00/\x03\x00\xb7\x00/" $i; done
 
-    mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
+		rm -rf $DIR/out/$LARCH/$LBIN 2>/dev/null
+		mkdir $DIR/out/$LARCH/$LBIN 2>/dev/null
     make install -j$JOBS DESTDIR=$DIR/out/$LARCH/$LBIN
     echogreen "$LBIN built sucessfully and can be found at: $DIR/out/$LARCH"
     cd $DIR
