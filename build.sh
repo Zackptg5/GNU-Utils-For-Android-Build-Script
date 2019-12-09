@@ -206,9 +206,9 @@ for LARCH in $ARCH; do
         [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
       elif $LINARO; then
 				if [ "$LARCH" == "arm" ] || [ "$LBIN" == "coreutils" ]; then
-					[ -f gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-	        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.4.1-2019.02-x86_64_$target_host.tar.xz; }
-	        export PATH=`pwd`/gcc-linaro-7.4.1-2019.02-x86_64_$target_host/bin:$PATH
+					[ -f gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz; }
+	        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz; }
+	        export PATH=`pwd`/gcc-linaro-7.5.0-2019.12-x86_64_$target_host/bin:$PATH
 				else
 					[ -f gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD" -O gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz; }
 	        [ -d gcc-arm-8.3-2019.03-x86_64-$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz; }
