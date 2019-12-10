@@ -54,11 +54,11 @@ build_zlib() {
 	[ -f "zlib-$ZVER.tar.gz" ] || wget http://zlib.net/zlib-$ZVER.tar.gz
 	tar -xf zlib-$ZVER.tar.gz
 	cd zlib-$ZVER
-	./configure --static --prefix=
+	./configure --static --prefix=$PREFIX
 	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 	make -j$JOBS
 	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
-	make install -j$JOBS DESTDIR=$DIR/$LBIN-$VER/extras
+	make install -j$JOBS
 	cd $DIR/$LBIN-$VER
 }
 build_bzip2() {
@@ -78,15 +78,17 @@ build_bzip2() {
 	$STRIP extras/bin/bunzip2 extras/bin/bzcat extras/bin/bzip2 extras/bin/bzip2recover
 }
 build_pcre() {
+	build_zlib
+	build_bzip2
 	[ "$1" == -s ] && local SEP=true || local SEP=false
 	cd $DIR
 	rm -rf pcre-$PVER 2>/dev/null
 	echogreen "Building PCRE..."
-	[ -f "cre-$PVER.tar.bz2" ] || wget https://ftp.pcre.org/pub/pcre/pcre-$PVER.tar.bz2
+	[ -f "pcre-$PVER.tar.bz2" ] || wget https://ftp.pcre.org/pub/pcre/pcre-$PVER.tar.bz2
 	tar -xf pcre-$PVER.tar.bz2
 	cd pcre-$PVER
 	# Binary compiles as dynamic regardless of flags for some reason, but that doesn't matter for grep compile - just need include and libs
-	./configure $FLAGS--prefix=/system --enable-unicode-properties --enable-jit --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --enable-pcregrep-libbz2 --host=$target_host CFLAGS="$CFLAGS -I$DIR/$LBIN-$VER/extras/include" LDFLAGS="$LDFLAGS -L$DIR/$LBIN-$VER/extras/lib"
+	./configure $FLAGS--prefix= --enable-unicode-properties --enable-jit --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --enable-pcregrep-libbz2 --host=$target_host CFLAGS="$CFLAGS -I$DIR/$LBIN-$VER/extras/include" LDFLAGS="$LDFLAGS -L$DIR/$LBIN-$VER/extras/lib"
 	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 	make -j$JOBS
 	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
@@ -136,7 +138,7 @@ if $NDK; then
   # Set up Android NDK
   echogreen "Fetching Android NDK $NDKVER"
   [ -f "android-ndk-$NDKVER-linux-x86_64.zip" ] || wget https://dl.google.com/android/repository/android-ndk-$NDKVER-linux-x86_64.zip
-  [ -d "android-ndk-$NDKVER" ] || unzip -o android-ndk-$NDKVER-linux-x86_64.zip
+  [ -d "android-ndk-$NDKVER" ] || unzip -qo android-ndk-$NDKVER-linux-x86_64.zip
   export ANDROID_NDK_HOME=$DIR/android-ndk-$NDKVER
   export ANDROID_TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
 else
@@ -157,6 +159,8 @@ for LARCH in $ARCH; do
   for LBIN in $BIN; do
     # Versioning and overrides
     LAPI=$API
+		PVER=8.43
+		ZVER=1.2.11
     case $LBIN in
       "bash") EXT=gz; VER=5.0;;
       "bc") EXT=gz; VER=1.07.1;;
@@ -166,7 +170,7 @@ for LARCH in $ARCH; do
       "ed") EXT=lz; VER=1.15;;
       "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
       "gawk") EXT=xz; VER=5.0.1;;
-      "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23; PVER=8.43; ZVER=1.2.11;;
+      "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23;;
       "gzip") EXT=xz; VER=1.10;;
       "ncurses") EXT=gz; VER=6.1;;
       "patch") EXT=xz; VER=2.7.6;;
@@ -180,7 +184,7 @@ for LARCH in $ARCH; do
     # Setup
     echogreen "Fetching $LBIN $VER"
     rm -rf $LBIN-$VER
-    [ -f "$LBIN-$VER.tar.$EXT" ] || wget http://mirrors.kernel.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT
+		[ -f "$LBIN-$VER.tar.$EXT" ] || wget http://mirrors.kernel.org/gnu/$LBIN/$LBIN-$VER.tar.$EXT
     tar -xf $LBIN-$VER.tar.$EXT
 
     export PATH=$OPATH
@@ -205,15 +209,9 @@ for LARCH in $ARCH; do
         ln -sf $ANDROID_TOOLCHAIN/$target_host$LAPI-clang++ $ANDROID_TOOLCHAIN/$GXX
         [ "$LARCH" == "arm" ] && target_host=arm-linux-androideabi
       elif $LINARO; then
-				if [ "$LARCH" == "arm" ] || [ "$LBIN" == "coreutils" ]; then
-					[ -f gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz; }
-	        [ -d gcc-linaro-7.4.1-2019.02-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz; }
-	        export PATH=`pwd`/gcc-linaro-7.5.0-2019.12-x86_64_$target_host/bin:$PATH
-				else
-					[ -f gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget "https://developer.arm.com/-/media/Files/downloads/gnu-a/8.3-2019.03/binrel/gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz?revision=2e88a73f-d233-4f96-b1f4-d8b36e9bb0b9&la=en&hash=167687FADA00B73D20EED2A67D0939A197504ACD" -O gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz; }
-	        [ -d gcc-arm-8.3-2019.03-x86_64-$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-arm-8.3-2019.03-x86_64-$target_host.tar.xz; }
-	        export PATH=`pwd`/gcc-arm-8.3-2019.03-x86_64-$target_host/bin:$PATH
-				fi
+				[ -f gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz ] || { echogreen "Fetching Linaro gcc"; wget https://releases.linaro.org/components/toolchain/binaries/latest-7/$target_host/gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz; }
+	      [ -d gcc-linaro-7.5.0-2019.12-x86_64_$target_host ] || { echogreen "Setting up Linaro gcc"; tar -xf gcc-linaro-7.5.0-2019.12-x86_64_$target_host.tar.xz; }
+	      export PATH=`pwd`/gcc-linaro-7.5.0-2019.12-x86_64_$target_host/bin:$PATH
         export CC=$target_host-gcc
         export CXX=$target_host-g++
       fi
@@ -264,10 +262,8 @@ for LARCH in $ARCH; do
       "coreutils") $NDK && ./configure $FLAGS--disable-nls --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure $FLAGS--disable-nls --without-gmp --with-gnu-ld --enable-no-install-program=stdbuf --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
       "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
 			"findutils") ./configure $FLAGS--disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-			"grep") build_zlib
-							build_bzip2
-							build_pcre -s
-							./configure $FLAGS--disable-shared --enable-perl-regexp --disable-nls --host=$target_host CFLAGS="$CFLAGS -I$DIR/$LBIN-$VER/pcre/system/include" LDFLAGS="$LDFLAGS -L$DIR/$LBIN-$VER/pcre/system/lib";;
+			"grep") build_pcre -s
+							./configure $FLAGS--disable-shared --enable-perl-regexp --disable-nls --host=$target_host CFLAGS="$CFLAGS -I$DIR/$LBIN-$VER/pcre/include" LDFLAGS="$LDFLAGS -L$DIR/$LBIN-$VER/pcre/lib";;
 			*) ./configure $FLAGS--disable-nls --without-gmp --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
     esac
     [ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
