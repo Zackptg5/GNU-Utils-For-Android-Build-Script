@@ -12,7 +12,8 @@ usage () {
   echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
   echogreen "STATIC=   (Default: true) (Valid options are: true, false)"
-  echogreen "API=   (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29)"
+  echogreen "API=      (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29)"
+	echogreen "SEP=      (Default: false) (Valid options are: true, false) - Determines if coreutils builds as a single busybox-like binary or as separate binaries"
   echogreen "           Note that you can put as many of these as you want together as long as they're comma separated"
   echogreen "           Ex: BIN=cpio,gzip,tar"
   echogreen "           Also note that coreutils includes advanced cp/mv (adds progress bar functionality with -g flag"
@@ -114,7 +115,7 @@ while true; do
   case "$1" in
     -h|--help) usage;;
     "") shift; break;;
-    API=*|STATIC=*|NDK=*|BIN=*|ARCH=*) eval $(echo "$1" | sed -e 's/=/="/' -e 's/$/"/' -e 's/,/ /g'); shift;;
+    API=*|STATIC=*|NDK=*|BIN=*|ARCH=*|SEP=*) eval $(echo "$1" | sed -e 's/=/="/' -e 's/$/"/' -e 's/,/ /g'); shift;;
     *) echored "Invalid option: $1!"; usage;;
   esac
 done
@@ -134,6 +135,7 @@ else
 fi
 
 [ -z $NDK ] && NDK=false
+[ -z $SEP ] && SEP=false
 if $NDK; then
   # Set up Android NDK
   echogreen "Fetching Android NDK $NDKVER"
@@ -223,8 +225,13 @@ for LARCH in $ARCH; do
     cd $DIR/$LBIN-$VER
     case $LBIN in
       "bash") $STATIC && FLAGS="--enable-static-link "; bash_patches || exit 1;;
-      "coreutils"|"sed") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/stdio.in.h; };;
-      "tar") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" gnu/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" gnu/stdio.in.h; };;
+      "coreutils") if ! $SEP; then
+										 FLAGS="--enable-single-binary=symlinks "
+										 $NDK || FLAGS="$FLAGS--enable-single-binary-exceptions=sort,timeout "
+									 fi
+									$NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/stdio.in.h; };;
+			"sed") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/stdio.in.h; };;
+			"tar") $NDK && { sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" gnu/cdefs.h; sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" gnu/stdio.in.h; };;
     esac
     # Fix for mktime_internal build error for non-ndk arm/64 cross-compile
     case $LBIN in
@@ -252,14 +259,14 @@ for LARCH in $ARCH; do
 
     case $LARCH in
       "arm") CFLAGS="$CFLAGS -mfloat-abi=softfp -mthumb"; LDFLAGS="$LDFLAGS -march=armv7-a -Wl,--fix-cortex-a8";;
-      "i686") CFLAGS="$CFLAGS -march=i686 -mtune=intel -mssse3 -mfpmath=sse -m32"; [ -z $FLAGS ] && FLAGS="TIME_T_32_BIT_OK=yes " || FLAGS="$FLAGS TIME_T_32_BIT_OK=yes ";;
+      "i686") CFLAGS="$CFLAGS -march=i686 -mtune=intel -mssse3 -mfpmath=sse -m32"; [ -z $FLAGS ] && FLAGS="TIME_T_32_BIT_OK=yes " || FLAGS="TIME_T_32_BIT_OK=yes $FLAGS";;
       "x86_64") CFLAGS="$CFLAGS -march=x86-64 -msse4.2 -mpopcnt -m64 -mtune=intel";;
     esac
 
     # Ed has super old configure flags, Bash got lots of stuff, Sort and timeout don't work on some roms, grep needs pcre
     case $LBIN in
       "bash") ./configure $FLAGS--disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --disable-stripping --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
-      "coreutils") $NDK && ./configure $FLAGS--disable-nls --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure $FLAGS--disable-nls --without-gmp --with-gnu-ld --enable-no-install-program=stdbuf --enable-single-binary=symlinks --enable-single-binary-exceptions=sort,timeout --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
+      "coreutils") $NDK && ./configure $FLAGS--disable-nls --without-gmp --enable-no-install-program=stdbuf --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure $FLAGS--disable-nls --without-gmp --with-gnu-ld --enable-no-install-program=stdbuf --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
       "ed") [ "$target_host" == "i686-linux-gnu" ] && ./configure --disable-stripping CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || ./configure --disable-stripping CC=$GCC CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
 			"findutils") ./configure $FLAGS--disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --sharedstatedir=/sdcard/gnu/com --localstatedir=/sdcard/gnu/var --datarootdir=/sdcard/gnu/share --host=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS";;
 			"grep") build_pcre -s
