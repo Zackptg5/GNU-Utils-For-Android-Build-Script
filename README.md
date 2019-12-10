@@ -25,7 +25,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **coreutils** | *Dynamic* | *Static*  | *Static*  |
 | **cpio**      | Yes     | Yes     | Yes    |
 | **diffutils** | Yes     | Yes     | Yes    |
-| **ed**        | Yes     | Yes     | Yes    |
+| **ed**        | Yes     | No      | No     |
 | **findutils** | Yes     | *Dynamic* | *Dynamic* |
 | **gawk**      | *Static*  | Yes     | Yes    |
 | **grep**      | Yes       | Yes     | Yes    |
