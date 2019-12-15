@@ -22,7 +22,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | --------- |:-------:|:-------:|:------:|
 | **bash**      | *Static*  | Yes     | Yes    |
 | **bc**        | Yes     | Yes     | Yes    |
-| **coreutils** | *Dynamic* | *Static*  | *Static*  |
+| **coreutils** | Yes     | *Static*  | *Static*  |
 | **cpio**      | Yes     | Yes     | Yes    |
 | **diffutils** | Yes     | Yes     | Yes    |
 | **ed**        | Yes     | No      | No     |
@@ -35,14 +35,21 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **sed**       | Yes     | Yes     | Yes    |
 | **tar**       | Yes     | Yes     | Yes    |
 
-*NDK won't compile bash as static for arm64 architecture for reasons still unknown*<br/>
-*Coreutils sort and timeout binaries have what appears to be seccomp problems when compiled without ndk statically and so they're left out of the combined binary*<br/>
-*Findutils no longer compiles static without ndk - not sure what updates broke it.<br/>
-*Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them
+* NDK won't compile bash as static for arm64 architecture for reasons still unknown<br/>
+* Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them
 
-## Future Ideas
+## Dynamic link dependency changes required
 
-* Compile all as dynamic with shared libraries rather than static compile
+* Findutils: libm.so.6, libc.so.6
+* Bash: libdl.so.2, libc.so.6
+* Gawk: libdl.so.2, libc.so.6, libm.so.6
+
+Just create symlinks for the 3 and you're good to go (change to lib64 if applicable):
+```
+ln -sf /system/lib/libc.so /system/lib/libc.so.6
+ln -sf /system/lib/libm.so /system/lib/libm.so.6
+ln -sf /system/lib/libdl.so /system/lib/libdl.so.2
+```
 
 ## Credits
 
