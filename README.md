@@ -38,18 +38,9 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 * NDK won't compile bash as static for arm64 architecture for reasons still unknown<br/>
 * Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them
 
-## Dynamic link dependency changes required
+## Dynamic link Issue
 
-* Findutils: libm.so.6, libc.so.6
-* Bash: libdl.so.2, libc.so.6
-* Gawk: libdl.so.2, libc.so.6, libm.so.6
-
-Just create symlinks for the 3 and you're good to go (change to lib64 if applicable):
-```
-ln -sf /system/lib/libc.so /system/lib/libc.so.6
-ln -sf /system/lib/libm.so /system/lib/libm.so.6
-ln -sf /system/lib/libdl.so /system/lib/libdl.so.2
-```
+If the binary wasn't compiled with NDK, it'll have library depenencies on non existent libraries. Some of these can be remedied with symlinks to it (for example: libc.so -> libc.so.6) but some can't because no version of it exists on android (like libreadline). In the case of libdl, even if symlink is made, it still doesn't work oddly.
 
 ## Credits
 
