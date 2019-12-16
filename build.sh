@@ -92,7 +92,7 @@ build_pcre() {
 	[ -f "pcre-$PVER.tar.bz2" ] || wget https://ftp.pcre.org/pub/pcre/pcre-$PVER.tar.bz2
 	[ -d pcre-$PVER ] || tar -xf pcre-$PVER.tar.bz2
 	cd pcre-$PVER
-	# Binary compiles as dynamic regardless of flags for some reason, but that doesn't matter for grep compile - just need include and libs
+	$STATIC && local FLAGS="$FLAGS--disable-shared "
 	./configure $FLAGS--prefix= --enable-unicode-properties --enable-jit --enable-pcre16 --enable-pcre32 --enable-pcregrep-libz --enable-pcregrep-libbz2 --host=$target_host CFLAGS="$CFLAGS -I$ZPREFIX/include -I$BPREFIX/include" LDFLAGS="$LDFLAGS -L$ZPREFIX/lib -L$BPREFIX/lib"
 	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 	make -j$JOBS
