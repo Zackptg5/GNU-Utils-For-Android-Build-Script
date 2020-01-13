@@ -262,6 +262,7 @@ for LBIN in $BIN; do
         sed -i -e '\|./fbc -c|d' -e 's|$(srcdir)/fix-libmath_h|cp -f ../../bc_libmath.h $(srcdir)/libmath.h|' bc/Makefile
         ;;
       "coreutils")
+        patch_file $DIR/coreutils.patch
         if ! $SEP; then
           FLAGS="$FLAGS--enable-single-binary=symlinks "
           $NDK || FLAGS="$FLAGS--enable-single-binary-exceptions=sort,timeout " #5
