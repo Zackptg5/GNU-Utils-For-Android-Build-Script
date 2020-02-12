@@ -8,7 +8,7 @@ echogreen () {
 usage () {
   echo " "
   echored "USAGE:"
-  echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, ncurses, patch, sed, tar)"
+  echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, nano, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
   echogreen "STATIC=   (Default: false) (Valid options are: true, false)"
   echogreen "API=      (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29)"
@@ -101,6 +101,24 @@ build_pcre() {
   make clean
 	cd $DIR/$LBIN-$VER
 }
+build_ncursesw() {
+  export NPREFIX="$(echo $PREFIX | sed "s|$LBIN|ncursesw|")"
+  [ -d $NPREFIX ] && return 0
+	cd $DIR
+	echogreen "Building NCurses wide..."
+	[ -f "ncursesw-$NVER.tar.gz" ] || wget -O ncursesw-$NVER.tar.gz http://mirrors.kernel.org/gnu/ncurses/ncurses-$NVER.tar.gz
+	[ -d ncursesw-$NVER ] || { mkdir ncursesw-$NVER; tar -xf ncursesw-$NVER.tar.gz --transform s/ncurses-$NVER/ncursesw-$NVER/; }
+	cd ncursesw-$NVER
+	./configure $FLAGS--prefix=$NPREFIX --enable-widec --disable-nls --disable-stripping --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS"
+	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
+	make -j$JOBS
+	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
+	make install
+  make clean
+	cd $DIR/$LBIN-$VER  
+  mkdir -p $PREFIX/etc
+  cp -rf $NPREFIX/share/terminfo $PREFIX/etc
+}
 
 TEXTRESET=$(tput sgr0)
 TEXTGREEN=$(tput setaf 2)
@@ -151,6 +169,7 @@ for LBIN in $BIN; do
   ZVER=1.2.11
   LVER=1.16
   GVER=0.20.1
+  NVER=6.1
   case $LBIN in
     "bash") EXT=gz; VER=5.0; $STATIC || NDK=false;;
     "bc") EXT=gz; VER=1.07.1;;
@@ -162,7 +181,8 @@ for LBIN in $BIN; do
     "gawk") EXT=xz; VER=5.0.1; $STATIC || NDK=false;;
     "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
-    "ncurses") EXT=gz; VER=6.1;;
+    "nano") EXT=xz; VER=4.8;;
+    "ncurses") EXT=gz; VER=$NVER;;
     "patch") EXT=xz; VER=2.7.6;;
     "sed") EXT=xz; VER=4.7; [ $LAPI -lt 23 ] && LAPI=23;;
     "tar") EXT=xz; VER=1.32; ! $STATIC && [ $LAPI -lt 28 ] && LAPI=28;;
@@ -305,6 +325,16 @@ for LBIN in $BIN; do
         sed -i 's/!defined __UCLIBC__)/!defined __UCLIBC__) || defined __ANDROID__/' lib/vasnprintf.c #2
         ./configure $FLAGS--prefix=$PREFIX --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || { echored "Configure failed!"; exit 1; }
         ;;
+      "nano")
+        build_ncursesw
+        # wget -O - "https://kernel.googlesource.com/pub/scm/fs/ext2/xfstests-bld/+/refs/heads/master/android-compat/getpwent.c?format=TEXT" | base64 --decode > src/getpwent.c
+        # wget -O src/pty.c https://raw.githubusercontent.com/CyanogenMod/android_external_busybox/cm-13.0/android/libc/pty.c
+        # sed -i 's|int ptsname_r|//hack int ptsname_r(int fd, char* buf, size_t len) {\nint bb_ptsname_r|' src/pty.c
+        # sed -i "/#include \"nano.h\"/a#define ptsname_r bb_ptsname_r\n//#define ttyname bb_ttyname\n#define ttyname_r bb_ttyname_r" src/proto.h
+        ./configure $FLAGS--prefix=$PREFIX --disable-nls --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || { echored "Configure failed!"; exit 1; }
+        sed -i "/#ifdef USE_SLANG/i#define HAVE_NCURSESW_NCURSES_H" src/nano.h
+        cp -rf $NPREFIX/include/ncursesw $NPREFIX/lib/libncursesw.a src/
+        ;;
       "ncurses")
         ./configure $FLAGS--prefix=$PREFIX --disable-nls --disable-stripping --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || { echored "Configure failed!"; exit 1; }
         ;;
@@ -328,7 +358,7 @@ for LBIN in $BIN; do
         ;;
     esac
 
-    make -j$JOBS
+    [ "$LBIN" == "nano" ] && make -j$JOBS LIBS="libncursesw.a" || make -j$JOBS
     [ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
 
     if [ "$LBIN" == "findutils" ]; then
@@ -338,6 +368,11 @@ for LBIN in $BIN; do
       rm -rf $PREFIX/sdcard $PREFIX/system
     else
       make install
+    fi
+    if [ "$LBIN" == "nano" ]; then
+      $STRIP $PREFIX/bin/nano
+      mv -f $PREFIX/bin/nano $PREFIX/bin/nano.bin
+      cp -f $DIR/nano_wrapper $PREFIX/bin/nano
     fi
     echogreen "$LBIN built sucessfully and can be found at: $PREFIX"
     cd $DIR
