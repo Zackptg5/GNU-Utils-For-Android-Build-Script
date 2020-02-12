@@ -30,13 +30,15 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **gawk**      | *Static*  | Yes     | Yes    |
 | **grep**      | Yes       | Yes     | Yes    |
 | **gzip**      | Yes     | Yes     | Yes    |
+| **nano**      | *Static* | No     | No     |
 | **ncurses**   | Yes     | Yes     | Yes    |
 | **patch**     | Yes     | Yes     | Yes    |
 | **sed**       | Yes     | Yes     | Yes    |
 | **tar**       | Yes     | Yes     | Yes    |
 
 * NDK won't compile bash as static for arm64 architecture for reasons still unknown<br/>
-* Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them
+* Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them<br/>
+* Haven't tested nano outside of NDK much at this point
 
 ## Dynamic link Issue
 
