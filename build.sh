@@ -116,8 +116,6 @@ build_ncursesw() {
 	make install
   make clean
 	cd $DIR/$LBIN-$VER  
-  mkdir -p $PREFIX/etc
-  cp -rf $NPREFIX/share/terminfo $PREFIX/etc
 }
 
 TEXTRESET=$(tput sgr0)
@@ -208,8 +206,6 @@ for LBIN in $BIN; do
     esac
     export PATH=$OPATH
     unset AR AS LD RANLIB STRIP CC CXX GCC GXX
-    # Bash doesn't compile as static with ndk aarch64 for reasons unknown
-    [ "$LBIN" == "bash" -a "$LARCH" == "aarch64" ] && { NDK=false; LINARO=true; target_host=aarch64-linux-gnu; }
     if $NDK || $LINARO; then
       export AR=$target_host-ar
       export AS=$target_host-as
@@ -273,7 +269,7 @@ for LBIN in $BIN; do
     echogreen "Configuring for $LARCH"
     case $LBIN in
       "bash")
-        $STATIC && FLAGS="$FLAGS--enable-static-link "
+        $STATIC && { FLAGS="$FLAGS--enable-static-link "; sed -i 's/-rdynamic//g' configure; sed -i 's/-rdynamic//g' configure.ac; }
         bash_patches || exit 1
         ./configure $FLAGS--prefix=$PREFIX --disable-nls --without-bash-malloc bash_cv_dev_fd=whacky bash_cv_getcwd_malloc=yes --enable-largefile --enable-alias --enable-history --enable-readline --enable-multibyte --enable-job-control --enable-array-variables --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || { echored "Configure failed!"; exit 1; }
         ;;
@@ -327,6 +323,8 @@ for LBIN in $BIN; do
         ;;
       "nano")
         build_ncursesw
+        mkdir -p $PREFIX/etc
+        cp -rf $NPREFIX/share/terminfo $PREFIX/etc
         # wget -O - "https://kernel.googlesource.com/pub/scm/fs/ext2/xfstests-bld/+/refs/heads/master/android-compat/getpwent.c?format=TEXT" | base64 --decode > src/getpwent.c
         # wget -O src/pty.c https://raw.githubusercontent.com/CyanogenMod/android_external_busybox/cm-13.0/android/libc/pty.c
         # sed -i 's|int ptsname_r|//hack int ptsname_r(int fd, char* buf, size_t len) {\nint bb_ptsname_r|' src/pty.c
