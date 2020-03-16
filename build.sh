@@ -167,22 +167,22 @@ for LBIN in $BIN; do
   ZVER=1.2.11
   LVER=1.16
   GVER=0.20.1
-  NVER=6.1
+  NVER=6.2
   case $LBIN in
     "bash") EXT=gz; VER=5.0; $STATIC || NDK=false;;
     "bc") EXT=gz; VER=1.07.1;;
-    "coreutils") EXT=xz; VER=8.31; [ $LAPI -lt 23 ] && LAPI=23;;
+    "coreutils") EXT=xz; VER=8.32; [ $LAPI -lt 23 ] && LAPI=23;;
     "cpio") EXT=gz; VER=2.12;;
     "diffutils") EXT=xz; VER=3.7;;
-    "ed") EXT=lz; VER=1.15;;
+    "ed") EXT=lz; VER=1.16;;
     "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
     "gawk") EXT=xz; VER=5.0.1; $STATIC || NDK=false;;
-    "grep") EXT=xz; VER=3.3; [ $LAPI -lt 23 ] && LAPI=23;;
+    "grep") EXT=xz; VER=3.4; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
     "nano") EXT=xz; VER=4.8;;
     "ncurses") EXT=gz; VER=$NVER;;
     "patch") EXT=xz; VER=2.7.6;;
-    "sed") EXT=xz; VER=4.7; [ $LAPI -lt 23 ] && LAPI=23;;
+    "sed") EXT=xz; VER=4.8; [ $LAPI -lt 23 ] && LAPI=23;;
     "tar") EXT=xz; VER=1.32; ! $STATIC && [ $LAPI -lt 28 ] && LAPI=28;;
     *) echored "Invalid binary specified!"; usage;;
   esac
@@ -266,6 +266,7 @@ for LBIN in $BIN; do
     # 3) minus_zero duplication error in NDK
     # 4) Bionic error fix in NDK
     # 5) Sort and timeout binaries have what appears to be seccomp problems and so don't work when compiled without ndk
+    # 6) New syscall function has been added in coreutils 8.32 - won't compile with android toolchains
     echogreen "Configuring for $LARCH"
     case $LBIN in
       "bash")
@@ -283,6 +284,7 @@ for LBIN in $BIN; do
           FLAGS="$FLAGS--enable-single-binary=symlinks "
           $NDK || FLAGS="$FLAGS--enable-single-binary-exceptions=sort,timeout " #5
         fi
+        sed -i 's/#ifdef __linux__/#ifndef __linux__/g' src/ls.c #6
         if $NDK; then
           sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/cdefs.h #4
           sed -i "s/USE_FORTIFY_LEVEL/BIONIC_FORTIFY/g" lib/stdio.in.h #4
