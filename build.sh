@@ -266,7 +266,7 @@ for LBIN in $BIN; do
     # 3) minus_zero duplication error in NDK
     # 4) Bionic error fix in NDK
     # 5) Sort and timeout binaries have what appears to be seccomp problems and so don't work when compiled without ndk
-    # 6) New syscall function has been added in coreutils 8.32 - won't compile with android toolchains
+    # 6) New syscall function has been added in coreutils 8.32 - won't compile with android toolchains - only needed for 64bit arch's
     echogreen "Configuring for $LARCH"
     case $LBIN in
       "bash")
@@ -325,13 +325,14 @@ for LBIN in $BIN; do
         ;;
       "nano")
         build_ncursesw
-        mkdir -p $PREFIX/etc
-        cp -rf $NPREFIX/share/terminfo $PREFIX/etc
+        mkdir -p $PREFIX/usr/share
+        cp -rf $NPREFIX/share/terminfo $PREFIX/usr/share
+        # Workaround no longer needed
         # wget -O - "https://kernel.googlesource.com/pub/scm/fs/ext2/xfstests-bld/+/refs/heads/master/android-compat/getpwent.c?format=TEXT" | base64 --decode > src/getpwent.c
         # wget -O src/pty.c https://raw.githubusercontent.com/CyanogenMod/android_external_busybox/cm-13.0/android/libc/pty.c
         # sed -i 's|int ptsname_r|//hack int ptsname_r(int fd, char* buf, size_t len) {\nint bb_ptsname_r|' src/pty.c
         # sed -i "/#include \"nano.h\"/a#define ptsname_r bb_ptsname_r\n//#define ttyname bb_ttyname\n#define ttyname_r bb_ttyname_r" src/proto.h
-        ./configure $FLAGS--prefix=$PREFIX --disable-nls --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || { echored "Configure failed!"; exit 1; }
+        ./configure $FLAGS--prefix=$PREFIX --datarootdir=$PREFIX/usr/share --disable-nls --host=$target_host --target=$target_host CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" || { echored "Configure failed!"; exit 1; }
         sed -i "/#ifdef USE_SLANG/i#define HAVE_NCURSESW_NCURSES_H" src/nano.h
         cp -rf $NPREFIX/include/ncursesw $NPREFIX/lib/libncursesw.a src/
         ;;
