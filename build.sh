@@ -265,7 +265,7 @@ for LBIN in $BIN; do
     "gawk") EXT=xz; VER=5.0.1; $STATIC || NDK=false;;
     "grep") EXT=xz; VER=3.4; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
-    "nano") EXT=xz; VER=4.8;;
+    "nano") EXT=xz; VER=4.9;;
     "ncurses") EXT=gz; VER=$NVER;;
     "patch") EXT=xz; VER=2.7.6;;
     "sed") EXT=xz; VER=4.8; [ $LAPI -lt 23 ] && LAPI=23;;
