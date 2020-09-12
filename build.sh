@@ -11,7 +11,7 @@ usage () {
   echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, nano, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
   echogreen "STATIC=   (Default: true) (Valid options are: true, false)"
-  echogreen "API=      (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29)"
+  echogreen "API=      (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29, 30)"
   echogreen "SEP=      (Default: false) (Valid options are: true, false) - Determines if coreutils builds as a single busybox-like binary or as separate binaries"
   echogreen "SELINUX=  (Default: true) (Valid options are: true, false) - Determines if you want to include selinux support in coreutils - note that minapi for selinux is 28 but 23 for coreutils"
   echogreen "           Note that you can put as many of these as you want together as long as they're comma separated"
@@ -204,7 +204,7 @@ TEXTRESET=$(tput sgr0)
 TEXTGREEN=$(tput setaf 2)
 TEXTRED=$(tput setaf 1)
 DIR=$PWD
-NDKVER=r20b
+NDKVER=r21d
 STATIC=true
 SEP=false
 SELINUX=true
@@ -223,7 +223,7 @@ IFS=$OIFS
 [ -z "$BIN" -o "$BIN" == "all" ] && BIN="bash bc coreutils cpio diffutils ed findutils gawk grep gzip ncurses patch sed tar"
 
 case $API in
-  21|22|23|24|26|27|28|29) ;;
+  21|22|23|24|26|27|28|29|30) ;;
   *) API=21;;
 esac
 
@@ -247,12 +247,11 @@ for LBIN in $BIN; do
   NDK=true
   # Versioning and overrides
   LAPI=$API
-  GVER=0.20.1
-  MVER=5.38
+  MVER=5.39
   NVER=6.2
-  OVER=1_1_1e
-  PVER=8.43
-  P2VER=10.34
+  OVER=1_1_1g
+  PVER=8.44
+  P2VER=10.35
   ZVER=1.2.11
   case $LBIN in
     "bash") EXT=gz; VER=5.0; $STATIC || NDK=false;;
@@ -262,10 +261,10 @@ for LBIN in $BIN; do
     "diffutils") EXT=xz; VER=3.7;;
     "ed") EXT=lz; VER=1.16;;
     "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
-    "gawk") EXT=xz; VER=5.0.1; $STATIC || NDK=false;;
+    "gawk") EXT=xz; VER=5.1.0; $STATIC || NDK=false;;
     "grep") EXT=xz; VER=3.4; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
-    "nano") EXT=xz; VER=4.9;;
+    "nano") EXT=xz; VER=5.2;;
     "ncurses") EXT=gz; VER=$NVER;;
     "patch") EXT=xz; VER=2.7.6;;
     "sed") EXT=xz; VER=4.8; [ $LAPI -lt 23 ] && LAPI=23;;
