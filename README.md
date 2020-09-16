@@ -37,7 +37,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **tar**       | Yes     | Yes     | Yes    |
 
 * Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them<br/>
-* Haven't tested nano or emac outside of NDK much at this point
+* Haven't tested nano outside of NDK much at this point
 * Coreutils won't build with selinux with dynamic link - static only
 
 ## Dynamic link Issue
