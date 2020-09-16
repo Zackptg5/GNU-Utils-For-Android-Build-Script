@@ -11,7 +11,7 @@ usage () {
   echogreen "BIN=      (Default: all) (Valid options are: bash, bc, coreutils, cpio, diffutils, ed, findutils, gawk, grep, gzip, nano, ncurses, patch, sed, tar)"
   echogreen "ARCH=     (Default: all) (Valid Arch values: all, arm, arm64, aarch64, x86, i686, x64, x86_64)"
   echogreen "STATIC=   (Default: true) (Valid options are: true, false)"
-  echogreen "API=      (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29)"
+  echogreen "API=      (Default: 21) (Valid options are: 21, 22, 23, 24, 26, 27, 28, 29, 30)"
   echogreen "SEP=      (Default: false) (Valid options are: true, false) - Determines if coreutils builds as a single busybox-like binary or as separate binaries"
   echogreen "SELINUX=  (Default: true) (Valid options are: true, false) - Determines if you want to include selinux support in coreutils - note that minapi for selinux is 28 but 23 for coreutils"
   echogreen "           Note that you can put as many of these as you want together as long as they're comma separated"
@@ -56,7 +56,7 @@ build_zlib() {
 	[ -f "zlib-$ZVER.tar.gz" ] || wget http://zlib.net/zlib-$ZVER.tar.gz
 	[ -d zlib-$ZVER ] || tar -xf zlib-$ZVER.tar.gz
 	cd zlib-$ZVER
-	./configure --prefix=$ZPREFIX
+  [ "$1" == "static" ] && ./configure --prefix=$ZPREFIX --static || ./configure --prefix=$ZPREFIX
 	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 	make -j$JOBS
 	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
@@ -180,7 +180,7 @@ build_selinux() {
   cd $DIR/$LBIN-$VER
 }
 build_libmagic() {
-  build_zlib
+  $STATIC && build_zlib static || build_zlib
   build_bzip2
   export MPREFIX="$(echo $PREFIX | sed "s|$LBIN|libmagic|")"
   [ -d $MPREFIX ] && return 0
@@ -204,7 +204,7 @@ TEXTRESET=$(tput sgr0)
 TEXTGREEN=$(tput setaf 2)
 TEXTRED=$(tput setaf 1)
 DIR=$PWD
-NDKVER=r20b
+NDKVER=r21d
 STATIC=true
 SEP=false
 SELINUX=true
@@ -223,7 +223,7 @@ IFS=$OIFS
 [ -z "$BIN" -o "$BIN" == "all" ] && BIN="bash bc coreutils cpio diffutils ed findutils gawk grep gzip ncurses patch sed tar"
 
 case $API in
-  21|22|23|24|26|27|28|29) ;;
+  21|22|23|24|26|27|28|29|30) ;;
   *) API=21;;
 esac
 
@@ -248,11 +248,11 @@ for LBIN in $BIN; do
   # Versioning and overrides
   LAPI=$API
   GVER=0.20.1
-  MVER=5.38
+  MVER=5.39
   NVER=6.2
-  OVER=1_1_1e
-  PVER=8.43
-  P2VER=10.34
+  OVER=1_1_1g
+  PVER=8.44
+  P2VER=10.35
   ZVER=1.2.11
   case $LBIN in
     "bash") EXT=gz; VER=5.0; $STATIC || NDK=false;;
@@ -262,10 +262,10 @@ for LBIN in $BIN; do
     "diffutils") EXT=xz; VER=3.7;;
     "ed") EXT=lz; VER=1.16;;
     "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
-    "gawk") EXT=xz; VER=5.0.1; $STATIC || NDK=false;;
+    "gawk") EXT=xz; VER=5.0.1; $STATIC || { [ $LAPI -lt 26 ] && LAPI=26; };;
     "grep") EXT=xz; VER=3.4; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
-    "nano") EXT=xz; VER=4.9;;
+    "nano") EXT=xz; VER=5.2;;
     "ncurses") EXT=gz; VER=$NVER;;
     "patch") EXT=xz; VER=2.7.6;;
     "sed") EXT=xz; VER=4.8; [ $LAPI -lt 23 ] && LAPI=23;;
@@ -435,7 +435,7 @@ for LBIN in $BIN; do
         # sed -i 's|int ptsname_r|//hack int ptsname_r(int fd, char* buf, size_t len) {\nint bb_ptsname_r|' src/pty.c
         # sed -i "/#include \"nano.h\"/a#define ptsname_r bb_ptsname_r\n//#define ttyname bb_ttyname\n#define ttyname_r bb_ttyname_r" src/proto.h
         ./configure $FLAGS--disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --datarootdir=/system/usr/share --host=$target_host --target=$target_host CFLAGS="$CFLAGS -I$ZPREFIX/include -I$BPREFIX/include -I$NPREFIX/include -I$MPREFIX/include" LDFLAGS="$LDFLAGS -L$ZPREFIX/lib -L$BPREFIX/lib -L$NPREFIX/lib -L$MPREFIX/lib" || { echored "Configure failed!"; exit 1; }
-        sed -i "/#ifdef USE_SLANG/i#define HAVE_NCURSESW_NCURSES_H" src/nano.h
+        sed -i "/#ifdef USE_SLANG/i#define HAVE_NCURSESW_NCURSES_H" src/definitions.h # Was src/nano.h in nano v4.9
         cp -rf $NPREFIX/include/ncursesw $NPREFIX/lib/libncursesw.a $MPREFIX/include/* $MPREFIX/lib/* src/
         ;;
       "ncurses")

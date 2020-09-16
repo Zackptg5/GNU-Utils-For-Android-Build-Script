@@ -1,7 +1,7 @@
 ## GNU Utils for Android Build Script ##
 
 This will build any of the following static GNU binaries:<br/>
-bash, bc (also includes dc), coreutils (has optional selinux support) (has openssl support) (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, findutils (includes find, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep) (has full perl regex support), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
+bash, bc (also includes dc), coreutils (has optional selinux support) (has openssl support) (includes advanced cp/mv - progress bar functionality), cpio, diffutils (includes cmp, diff, diff3, sdiff), ed, emacs, findutils (includes find, locate, updatedb, xargs), gawk (GNU awk), grep (also includes egrep and fgrep) (has full perl regex support), gzip (also includes gunzip and gzexe), ncurses (includes capconvert, clear, infocmp, tabs, tic, toe, tput, tset), patch, sed, tar
 
 ## Build instructions
 
@@ -27,7 +27,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **diffutils** | Yes     | Yes     | Yes    |
 | **ed**        | Yes     | No      | No     |
 | **findutils** | Yes     | *Dynamic* | *Dynamic* |
-| **gawk**      | *Static*  | Yes     | Yes    |
+| **gawk**      | Yes     | Yes     | Yes    |
 | **grep**      | Yes       | Yes     | Yes    |
 | **gzip**      | Yes     | Yes     | Yes    |
 | **nano**      | *Static* | No     | No     |
@@ -37,7 +37,7 @@ The below table notes if the binary is compatible with android ndk, linaro, or g
 | **tar**       | Yes     | Yes     | Yes    |
 
 * Pwcat and Grcat (part of gawk) seg fault when ndk is used, compile without it to use them<br/>
-* Haven't tested nano outside of NDK much at this point
+* Haven't tested nano or emac outside of NDK much at this point
 * Coreutils won't build with selinux with dynamic link - static only
 
 ## Dynamic link Issue
