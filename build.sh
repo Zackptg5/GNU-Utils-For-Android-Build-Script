@@ -254,17 +254,17 @@ for LBIN in $BIN; do
   P2VER=10.35
   ZVER=1.2.11
   case $LBIN in
-    "bash") EXT=gz; VER=5.0; $STATIC || NDK=false;;
+    "bash") EXT=gz; VER=5.1; $STATIC || NDK=false;;
     "bc") EXT=gz; VER=1.07.1;;
     "coreutils") EXT=xz; VER=8.32; $SELINUX && { [ $LAPI -lt 28 ] && LAPI=28; } || { [ $LAPI -lt 23 ] && LAPI=23; };;
     "cpio") EXT=gz; VER=2.12;;
     "diffutils") EXT=xz; VER=3.7;;
     "ed") EXT=lz; VER=1.16;;
     "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
-    "gawk") EXT=xz; VER=5.0.1; $STATIC || { [ $LAPI -lt 26 ] && LAPI=26; };;
-    "grep") EXT=xz; VER=3.4; [ $LAPI -lt 23 ] && LAPI=23;;
+    "gawk") EXT=xz; VER=5.1.0; $STATIC || { [ $LAPI -lt 26 ] && LAPI=26; };;
+    "grep") EXT=xz; VER=3.6; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
-    "nano") EXT=xz; VER=5.2;;
+    "nano") EXT=xz; VER=5.4;;
     "ncurses") EXT=gz; VER=$NVER;;
     "patch") EXT=xz; VER=2.7.6;;
     "sed") EXT=xz; VER=4.8; [ $LAPI -lt 23 ] && LAPI=23;;
