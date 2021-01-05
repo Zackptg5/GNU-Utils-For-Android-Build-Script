@@ -56,7 +56,7 @@ build_zlib() {
 	[ -f "zlib-$ZVER.tar.gz" ] || wget http://zlib.net/zlib-$ZVER.tar.gz
 	[ -d zlib-$ZVER ] || tar -xf zlib-$ZVER.tar.gz
 	cd zlib-$ZVER
-	./configure --prefix=$ZPREFIX
+  [ "$1" == "static" ] && ./configure --prefix=$ZPREFIX --static || ./configure --prefix=$ZPREFIX
 	[ $? -eq 0 ] || { echored "Configure failed!"; exit 1; }
 	make -j$JOBS
 	[ $? -eq 0 ] || { echored "Build failed!"; exit 1; }
@@ -180,7 +180,7 @@ build_selinux() {
   cd $DIR/$LBIN-$VER
 }
 build_libmagic() {
-  build_zlib
+  $STATIC && build_zlib static || build_zlib
   build_bzip2
   export MPREFIX="$(echo $PREFIX | sed "s|$LBIN|libmagic|")"
   [ -d $MPREFIX ] && return 0
@@ -261,7 +261,7 @@ for LBIN in $BIN; do
     "diffutils") EXT=xz; VER=3.7;;
     "ed") EXT=lz; VER=1.16;;
     "findutils") EXT=xz; VER=4.7.0; [ $LAPI -lt 23 ] && LAPI=23;;
-    "gawk") EXT=xz; VER=5.1.0; $STATIC || NDK=false;;
+    "gawk") EXT=xz; VER=5.0.1; $STATIC || { [ $LAPI -lt 26 ] && LAPI=26; };;
     "grep") EXT=xz; VER=3.4; [ $LAPI -lt 23 ] && LAPI=23;;
     "gzip") EXT=xz; VER=1.10;;
     "nano") EXT=xz; VER=5.2;;
@@ -434,7 +434,7 @@ for LBIN in $BIN; do
         # sed -i 's|int ptsname_r|//hack int ptsname_r(int fd, char* buf, size_t len) {\nint bb_ptsname_r|' src/pty.c
         # sed -i "/#include \"nano.h\"/a#define ptsname_r bb_ptsname_r\n//#define ttyname bb_ttyname\n#define ttyname_r bb_ttyname_r" src/proto.h
         ./configure $FLAGS--disable-nls --prefix=/system --sbindir=/system/bin --libexecdir=/system/bin --datarootdir=/system/usr/share --host=$target_host --target=$target_host CFLAGS="$CFLAGS -I$ZPREFIX/include -I$BPREFIX/include -I$NPREFIX/include -I$MPREFIX/include" LDFLAGS="$LDFLAGS -L$ZPREFIX/lib -L$BPREFIX/lib -L$NPREFIX/lib -L$MPREFIX/lib" || { echored "Configure failed!"; exit 1; }
-        sed -i "/#ifdef USE_SLANG/i#define HAVE_NCURSESW_NCURSES_H" src/nano.h
+        sed -i "/#ifdef USE_SLANG/i#define HAVE_NCURSESW_NCURSES_H" src/definitions.h # Was src/nano.h in nano v4.9
         cp -rf $NPREFIX/include/ncursesw $NPREFIX/lib/libncursesw.a $MPREFIX/include/* $MPREFIX/lib/* src/
         ;;
       "ncurses")
