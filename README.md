@@ -1,3 +1,6 @@
+# Deprecated - [See here for the new build script](https://github.com/Zackptg5/Cross-Compiled-Binaries-Android/tree/master/build_script)
+
+
 ## GNU Utils for Android Build Script ##
 
 This will build any of the following static GNU binaries:<br/>
